@@ -3,8 +3,9 @@
 Features:
 - Monthly worksheets — a new tab (e.g. "2026-03") is created automatically
   the first time a transaction is logged in that month.
-- Each monthly sheet includes headers and live summary formulas
-  (Total Income, Total Expenses, Net Savings, per-category breakdown).
+- Each monthly sheet includes headers, live summary formulas, a running
+  balance carried forward from the previous month, category/type dropdowns,
+  numeric formatting, and embedded charts.
 - A ``get_monthly_summary()`` function reads raw data and returns computed
   metrics that the Telegram bot can display.
 """
@@ -69,6 +70,50 @@ def _invalidate() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Internal helpers
+# ---------------------------------------------------------------------------
+
+
+def _previous_month(year_month: str) -> str:
+    """Return the YYYY-MM string for the month preceding *year_month*."""
+    year, month = int(year_month[:4]), int(year_month[5:7])
+    if month == 1:
+        return f"{year - 1}-12"
+    return f"{year}-{month - 1:02d}"
+
+
+def _grid_range(sheet_id: int, r0: int, r1: int, c0: int, c1: int) -> dict:
+    """Return a Sheets API GridRange dict (0-indexed, exclusive end)."""
+    return {
+        "sheetId": sheet_id,
+        "startRowIndex": r0,
+        "endRowIndex": r1,
+        "startColumnIndex": c0,
+        "endColumnIndex": c1,
+    }
+
+
+def _fmt_bold(sheet_id: int, r0: int, r1: int, c0: int, c1: int) -> dict:
+    """Return a ``repeatCell`` request that bolds a range."""
+    return {
+        "repeatCell": {
+            "range": _grid_range(sheet_id, r0, r1, c0, c1),
+            "cell": {"userEnteredFormat": {"textFormat": {"bold": True}}},
+            "fields": "userEnteredFormat.textFormat.bold",
+        }
+    }
+
+
+def _num_fmt(pattern: str) -> dict:
+    """Return a CellData dict with a number format."""
+    return {
+        "userEnteredFormat": {
+            "numberFormat": {"type": "NUMBER", "pattern": pattern}
+        }
+    }
+
+
+# ---------------------------------------------------------------------------
 # Monthly worksheet helpers
 # ---------------------------------------------------------------------------
 
@@ -76,48 +121,199 @@ def _invalidate() -> None:
 def _get_or_create_monthly_sheet(year_month: str) -> gspread.Worksheet:
     """Return the worksheet for *year_month* (e.g. ``"2026-03"``).
 
-    If the sheet doesn't exist yet it is created with headers in row 1
-    and live summary formulas in columns G–H.
+    If the sheet doesn't exist yet it is created with headers, formulas,
+    formatting, validation, and charts.
     """
     ss = _get_spreadsheet()
     try:
         return ss.worksheet(year_month)
     except WorksheetNotFound:
-        ws = ss.add_worksheet(title=year_month, rows=500, cols=10)
-        _setup_headers_and_formulas(ws)
+        ws = ss.add_worksheet(title=year_month, rows=500, cols=16)
+        _setup_headers_and_formulas(ws, year_month)
         logger.info("Created new monthly sheet: %s", year_month)
         return ws
 
 
-def _setup_headers_and_formulas(ws: gspread.Worksheet) -> None:
-    """Populate row 1 headers (A–E) and summary formulas (G–H)."""
+def _setup_headers_and_formulas(ws: gspread.Worksheet, year_month: str) -> None:
+    """Set up a new monthly sheet: headers, formulas, running balance,
+    number formatting, category/type dropdowns, and embedded charts."""
 
-    # --- Data headers (A1:E1) ---
+    prev = _previous_month(year_month)
+
+    # --- 1. Cell data ---------------------------------------------------
+
+    # Data headers (A1:E1)
     ws.update("A1:E1", [_HEADERS], value_input_option="USER_ENTERED")
-    ws.format("A1:E1", {"textFormat": {"bold": True}})
 
-    # --- Summary block (G:H) ---
+    # Summary block (G:H)
+    #   Row 1  Metric / Value  (header)
+    #   Row 2  Total Income
+    #   Row 3  Total Expenses
+    #   Row 4  Net Savings
+    #   Row 5  (blank)
+    #   Row 6  Carried Forward  ← from previous month's Running Total
+    #   Row 7  Running Total    ← Carried Forward + this month's Net
+    #   Row 8  (blank)
+    #   Row 9  Category Breakdown (header)
+    #   Row 10+ per-category SUMIF
     summary_cells: list[list[str]] = [
         ["Metric", "Value"],
         ["Total Income", '=SUMIFS(D:D,E:E,"Income")'],
         ["Total Expenses", '=SUMIFS(D:D,E:E,"Expense")'],
         ["Net Savings", "=H2-H3"],
-        [],  # blank separator
+        [],
+        ["Carried Forward", f"=IFERROR('{prev}'!H7,0)"],
+        ["Running Total", "=H6+H4"],
+        [],
         ["Category Breakdown", ""],
     ]
 
-    # One row per known category: =SUMIF(C:C,"Food",D:D)
+    cat_start_0 = len(summary_cells)  # 0-indexed row where categories begin
     for cat in _FORMULA_CATEGORIES:
         summary_cells.append([cat, f'=SUMIF(C:C,"{cat}",D:D)'])
+    cat_end_0 = len(summary_cells)
 
-    end_row = len(summary_cells)
     ws.update(
-        f"G1:H{end_row}",
+        f"G1:H{cat_end_0}",
         summary_cells,
         value_input_option="USER_ENTERED",
     )
-    ws.format("G1:H1", {"textFormat": {"bold": True}})
-    ws.format("G6:G6", {"textFormat": {"bold": True}})
+
+    # --- 2. Formatting, validation & charts (single batch call) ---------
+
+    sid = ws.id
+
+    requests: list[dict] = [
+        # Bold labels
+        _fmt_bold(sid, 0, 1, 0, 5),      # A1:E1 data headers
+        _fmt_bold(sid, 0, 1, 6, 8),      # G1:H1 summary header
+        _fmt_bold(sid, 5, 7, 6, 7),      # G6:G7 (Carried Forward, Running Total)
+        _fmt_bold(sid, 8, 9, 6, 7),      # G9 (Category Breakdown)
+
+        # Number format: Amount column D (#,##0.00)
+        {
+            "repeatCell": {
+                "range": _grid_range(sid, 1, 500, 3, 4),
+                "cell": _num_fmt("#,##0.00"),
+                "fields": "userEnteredFormat.numberFormat",
+            }
+        },
+        # Number format: Summary values column H
+        {
+            "repeatCell": {
+                "range": _grid_range(sid, 1, cat_end_0, 7, 8),
+                "cell": _num_fmt("#,##0.00"),
+                "fields": "userEnteredFormat.numberFormat",
+            }
+        },
+
+        # Dropdown: Category (column C) — non-strict, allows custom values
+        {
+            "setDataValidation": {
+                "range": _grid_range(sid, 1, 500, 2, 3),
+                "rule": {
+                    "condition": {
+                        "type": "ONE_OF_LIST",
+                        "values": [{"userEnteredValue": c} for c in _FORMULA_CATEGORIES],
+                    },
+                    "showCustomUi": True,
+                    "strict": False,
+                },
+            }
+        },
+        # Dropdown: Type (column E) — strict Income/Expense only
+        {
+            "setDataValidation": {
+                "range": _grid_range(sid, 1, 500, 4, 5),
+                "rule": {
+                    "condition": {
+                        "type": "ONE_OF_LIST",
+                        "values": [
+                            {"userEnteredValue": "Income"},
+                            {"userEnteredValue": "Expense"},
+                        ],
+                    },
+                    "showCustomUi": True,
+                    "strict": True,
+                },
+            }
+        },
+
+        # ---- Charts ----
+
+        # Pie chart — category breakdown
+        {
+            "addChart": {
+                "chart": {
+                    "spec": {
+                        "title": "By Category",
+                        "pieChart": {
+                            "legendPosition": "RIGHT_LEGEND",
+                            "domain": {
+                                "sourceRange": {
+                                    "sources": [_grid_range(sid, cat_start_0, cat_end_0, 6, 7)]
+                                }
+                            },
+                            "series": {
+                                "sourceRange": {
+                                    "sources": [_grid_range(sid, cat_start_0, cat_end_0, 7, 8)]
+                                }
+                            },
+                        },
+                    },
+                    "position": {
+                        "overlayPosition": {
+                            "anchorCell": {"sheetId": sid, "rowIndex": 0, "columnIndex": 9},
+                            "widthPixels": 500,
+                            "heightPixels": 300,
+                        }
+                    },
+                }
+            }
+        },
+
+        # Column chart — Income vs Expenses
+        {
+            "addChart": {
+                "chart": {
+                    "spec": {
+                        "title": "Income vs Expenses",
+                        "basicChart": {
+                            "chartType": "COLUMN",
+                            "legendPosition": "NO_LEGEND",
+                            "domains": [
+                                {
+                                    "domain": {
+                                        "sourceRange": {
+                                            "sources": [_grid_range(sid, 1, 3, 6, 7)]
+                                        }
+                                    }
+                                }
+                            ],
+                            "series": [
+                                {
+                                    "series": {
+                                        "sourceRange": {
+                                            "sources": [_grid_range(sid, 1, 3, 7, 8)]
+                                        }
+                                    }
+                                }
+                            ],
+                        },
+                    },
+                    "position": {
+                        "overlayPosition": {
+                            "anchorCell": {"sheetId": sid, "rowIndex": 16, "columnIndex": 9},
+                            "widthPixels": 500,
+                            "heightPixels": 300,
+                        }
+                    },
+                }
+            }
+        },
+    ]
+
+    _get_spreadsheet().batch_update({"requests": requests})
 
 
 # ---------------------------------------------------------------------------
@@ -171,6 +367,8 @@ class MonthlySummary:
     total_income: float = 0.0
     total_expenses: float = 0.0
     net_savings: float = 0.0
+    carried_forward: float = 0.0
+    running_total: float = 0.0
     category_totals: dict[str, float] = field(default_factory=dict)
     transaction_count: int = 0
 
@@ -208,6 +406,20 @@ def get_monthly_summary(year_month: str) -> MonthlySummary:
 
     summary.net_savings = summary.total_income - summary.total_expenses
     summary.category_totals = dict(sorted(category_totals.items(), key=lambda x: -x[1]))
+
+    # Read running balance from formula cells (use FORMATTED_VALUE to get
+    # the evaluated result rather than the raw formula text).
+    try:
+        cf_val = ws.acell("H6", value_render_option="FORMATTED_VALUE").value
+        summary.carried_forward = float(cf_val.replace(",", "")) if cf_val else 0.0
+    except (ValueError, TypeError, AttributeError):
+        pass
+    try:
+        rt_val = ws.acell("H7", value_render_option="FORMATTED_VALUE").value
+        summary.running_total = float(rt_val.replace(",", "")) if rt_val else 0.0
+    except (ValueError, TypeError, AttributeError):
+        pass
+
     return summary
 
 
