@@ -1,0 +1,9 @@
+services:
+  bot:
+    build: .
+    env_file: .env
+    volumes:
+      # Mount your service-account JSON into the container.
+      # Make sure the filename matches GOOGLE_SHEETS_CREDENTIALS_FILE in .env.
+      - ./service_account.json:/opt/app/service_account.json:ro
+    restart: unless-stopped
