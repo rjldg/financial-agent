@@ -88,6 +88,9 @@ async def summary_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         f"💸 Total Expenses:  {s.total_expenses:>12,.2f}",
         f"💵 Net Savings:     {s.net_savings:>12,.2f}",
         f"📝 Transactions:    {s.transaction_count}",
+        "",
+        f"📦 Carried Forward: {s.carried_forward:>12,.2f}",
+        f"🏦 Running Total:   {s.running_total:>12,.2f}",
     ]
 
     if s.category_totals:
