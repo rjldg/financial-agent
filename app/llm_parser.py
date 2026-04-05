@@ -19,16 +19,33 @@ class RateLimitError(Exception):
     """Raised when the LLM API is unavailable after retries."""
 
 
+# The exact set of allowed categories — must match _FORMULA_CATEGORIES in sheets_db.py
+Category = Literal[
+    "Food",
+    "Transport",
+    "Bills",
+    "Salary",
+    "Entertainment",
+    "Shopping",
+    "Health",
+    "Utilities",
+    "Rent",
+    "Freelance",
+    "Dating",
+    "Other",
+]
+
+
 class Transaction(BaseModel):
     """Structured financial transaction extracted from natural language."""
 
     amount: float = Field(..., description="The monetary amount (always positive).")
-    category: str = Field(
+    category: Category = Field(
         ...,
         description=(
-            "Best-fit category for the transaction. "
-            "Examples: Food, Transport, Bills, Salary, Entertainment, Shopping, "
-            "Health, Utilities, Rent, Freelance, Dating, Other."
+            "MUST be exactly one of: Food, Transport, Bills, Salary, "
+            "Entertainment, Shopping, Health, Utilities, Rent, Freelance, "
+            "Dating, Other. Do NOT invent new categories."
         ),
     )
     description: str = Field(
@@ -46,9 +63,17 @@ _SYSTEM_PROMPT = (
     "The user will send a short natural-language message about spending or "
     "receiving money. Extract the structured transaction details. "
     "If the currency or amount is ambiguous, make a best-effort guess. "
+    "\n\n"
+    "IMPORTANT — the 'category' field MUST be EXACTLY one of these values "
+    "(case-sensitive, no variations):\n"
+    "  Food, Transport, Bills, Salary, Entertainment, Shopping, "
+    "Health, Utilities, Rent, Freelance, Dating, Other\n"
+    "Do NOT use any other category name like 'Groceries', 'Food & Dining', "
+    "'Commute', etc. Map them to the closest allowed category.\n\n"
     "You MUST respond with ONLY a JSON object matching this exact schema, "
     "no other text:\n"
-    '{"amount": <number>, "category": "<string>", "description": "<string>", "type": "<Income or Expense>"}'
+    '{"amount": <number>, "category": "<one of the allowed values>", '
+    '"description": "<string>", "type": "<Income or Expense>"}'
 )
 
 _MAX_RETRIES = 3
