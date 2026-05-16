@@ -51,16 +51,16 @@ bot.py ──► llm_parser.py ──► Ollama (local LLM, OpenAI-compatible AP
   A               B             C           D          E       │   G                     H
 ───────────────────────────────────────────────────────────────│──────────────────────────────
  Date           Description   Category ▼  Amount     Type ▼   │  Metric               Value
- 2026-03-21     McDo lunch    Food        150.00    Expense    │  Total Income     600,000.00
- 2026-03-21     Salary        Salary   600,000.00   Income     │  Total Expenses     2,350.00
-                                                               │  Net Savings      597,650.00
+ 2026-03-21     McDo lunch    Food        150.00    Expense    │  Total Income       600,000.00
+ 2026-03-21     Salary        Salary     600,000.00   Income     │  Total Expenses     2,350.00
+                                                               │  Net Savings        597,650.00
                                                                │
                                                                │  Carried Forward        0.00
-                                                               │  Running Total    597,650.00
+                                                               │  Running Total      597,650.00
                                                                │
                                                                │  Category Breakdown
                                                                │  Food                150.00
-                                                               │  Salary          600,000.00
+                                                               │  Salary             600,000.00
                                                                │  ...
 
           ┌───────────────────┐    ┌──────────────────────┐
@@ -191,16 +191,16 @@ The `docker-compose.yml` mounts `service_account.json` read-only and loads `.env
 ```
 📊 2026-03 Financial Summary
 
-💰 Total Income:      600,000.00
+💰 Total Income:        600,000.00
 💸 Total Expenses:      2,350.00
-💵 Net Savings:       597,650.00
+💵 Net Savings:         597,650.00
 📝 Transactions:       8
 
 📦 Carried Forward:         0.00
-🏦 Running Total:     597,650.00
+🏦 Running Total:       597,650.00
 
 📋 Breakdown by Category:
-  Salary             600,000.00
+  Salary               600,000.00
   Food                 1,200.00
   Transport              500.00
   Bills                  650.00
