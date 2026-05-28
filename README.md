@@ -91,7 +91,7 @@ Download and install Ollama from [https://ollama.com/download](https://ollama.co
 ollama pull gemma3:4b
 ```
 
-Ollama will start automatically on `http://localhost:11434`. You can verify it's running:
+Ollama will start automatically on `http://127.0.0.1:11434`. You can verify it's running:
 
 ```bash
 ollama list
@@ -129,8 +129,8 @@ TELEGRAM_TOKEN=7123456789:AAH...your-token-here
 ALLOWED_USER_ID=123456789
 SHEET_ID=1BxiMVs0XRA5nF...your-sheet-id
 
-# Ollama (optional — these are the defaults)
-OLLAMA_BASE_URL=http://localhost:11434
+# Ollama (optional — 127.0.0.1 is recommended to avoid IPv6 DNS timeout delays on Windows)
+OLLAMA_BASE_URL=http://127.0.0.1:11434
 OLLAMA_MODEL=gemma3:4b
 ```
 
@@ -216,7 +216,7 @@ The `docker-compose.yml` mounts `service_account.json` read-only and loads `.env
 | `ALLOWED_USER_ID` | Yes | — | Your Telegram numeric user ID |
 | `SHEET_ID` | Yes | — | Google Sheet document ID (from the URL) |
 | `GOOGLE_SHEETS_CREDENTIALS_FILE` | No | `service_account.json` | Path to the service-account JSON |
-| `OLLAMA_BASE_URL` | No | `http://localhost:11434` | Base URL of the local Ollama server |
+| `OLLAMA_BASE_URL` | No | `http://127.0.0.1:11434` | Base URL of the local Ollama server (use `127.0.0.1` to bypass IPv6 DNS resolution issues on Windows) |
 | `OLLAMA_MODEL` | No | `gemma3:4b` | Ollama model to use for extraction |
 
 ---
