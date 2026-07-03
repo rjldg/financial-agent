@@ -7,6 +7,7 @@ from collections import defaultdict
 from gspread.exceptions import APIError, WorksheetNotFound
 
 from app.models import MonthlySummary
+from app.sheets import theme
 from app.sheets.client import (
     batch_update, fmt_bold, get_spreadsheet, grid_range, invalidate, num_fmt,
 )
@@ -66,10 +67,10 @@ def _setup_headers_and_formulas(ws, year_month: str) -> None:
         fmt_bold(sid, 5, 7, 6, 7),
         fmt_bold(sid, 8, 9, 6, 7),
         {"repeatCell": {"range": grid_range(sid, 1, 500, 3, 4),
-                        "cell": num_fmt("#,##0.00"),
+                        "cell": num_fmt('"₱"#,##0.00'),
                         "fields": "userEnteredFormat.numberFormat"}},
         {"repeatCell": {"range": grid_range(sid, 1, cat_end_0, 7, 8),
-                        "cell": num_fmt("#,##0.00"),
+                        "cell": num_fmt('"₱"#,##0.00'),
                         "fields": "userEnteredFormat.numberFormat"}},
         {"setDataValidation": {"range": grid_range(sid, 1, 500, 2, 3),
                                "rule": {"condition": {"type": "ONE_OF_LIST",
@@ -93,6 +94,7 @@ def _setup_headers_and_formulas(ws, year_month: str) -> None:
             "position": {"overlayPosition": {"anchorCell": {"sheetId": sid, "rowIndex": 16, "columnIndex": 9},
                 "widthPixels": 500, "heightPixels": 300}}}}},
     ]
+    requests += theme.monthly_theme_requests(sid)
     batch_update(requests)
 
 
