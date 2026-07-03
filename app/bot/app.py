@@ -59,6 +59,9 @@ def main() -> None:
     except RuntimeError:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
+    from app.config import validate_config
+    for problem in validate_config():
+        logger.warning("Config issue: %s", problem)
     app = build_application()
     try:
         from app.sheets import dashboard
