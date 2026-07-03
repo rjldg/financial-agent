@@ -21,3 +21,7 @@ Thumbs.db
 
 # nssm logs
 logs/
+
+# Local planning/spec artifacts (brainstorming + writing-plans)
+.config/
+.superpowers/
