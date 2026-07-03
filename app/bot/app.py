@@ -5,12 +5,12 @@ import asyncio
 import logging
 
 from telegram.ext import (
-    ApplicationBuilder, CommandHandler, MessageHandler, filters,
+    ApplicationBuilder, CallbackQueryHandler, CommandHandler, MessageHandler, filters,
 )
 
 from app.config import TELEGRAM_TOKEN
 from app.bot.handlers.reports import start_handler, summary_handler, months_handler
-from app.bot.handlers.transactions import message_handler
+from app.bot.handlers.transactions import message_handler, quickfix_callback, undo_handler
 
 logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s", level=logging.INFO,
@@ -35,6 +35,8 @@ def build_application():
     from app.bot.handlers.budgets import setbudget_handler, budgets_handler
     app.add_handler(CommandHandler("setbudget", setbudget_handler))
     app.add_handler(CommandHandler("budgets", budgets_handler))
+    app.add_handler(CommandHandler("undo", undo_handler))
+    app.add_handler(CallbackQueryHandler(quickfix_callback))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
     return app
 
