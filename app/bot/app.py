@@ -37,6 +37,10 @@ def build_application():
     app.add_handler(CommandHandler("budgets", budgets_handler))
     app.add_handler(CommandHandler("undo", undo_handler))
     app.add_handler(CallbackQueryHandler(quickfix_callback))
+    from app.bot.handlers.queries import search_handler, insights_handler, ask_handler
+    app.add_handler(CommandHandler("search", search_handler))
+    app.add_handler(CommandHandler("insights", insights_handler))
+    app.add_handler(CommandHandler("ask", ask_handler))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
     return app
 
