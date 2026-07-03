@@ -43,6 +43,13 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             "❌ I understood the transaction but failed to write it to Google Sheets."
         )
         return
-    await update.message.reply_text(
-        f"✅ Logged: {txn.amount:,.2f} ({txn.category}) — {txn.description}"
-    )
+    reply = f"✅ Logged: {txn.amount:,.2f} ({txn.category}) — {txn.description}"
+    if txn.type == "Expense":
+        try:
+            from app.sheets.budgets import budget_alert_for
+            alert = budget_alert_for(txn.category, now[:7])
+            if alert:
+                reply += f"\n{alert}"
+        except Exception:
+            logger.exception("Budget alert lookup failed (non-fatal)")
+    await update.message.reply_text(reply)
