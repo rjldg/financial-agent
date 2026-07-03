@@ -94,3 +94,111 @@ def parse_addsub_args(args: list[str]) -> dict:
         raise ValueError("month must be between 1 and 12")
     return {"name": name, "amount": amount, "category": category, "type": ttype,
             "frequency": frequency, "day": day, "month": month}
+
+# --- Sheets I/O (append below the pure engine) ---
+from app.models import Subscription  # noqa: E402
+from app.sheets.client import get_spreadsheet  # noqa: E402
+
+
+def _row_to_sub(row: list[str], row_index: int) -> Subscription:
+    def _int_or_none(v):
+        v = (v or "").strip()
+        return int(v) if v else None
+
+    lc = (row[7] or "").strip() if len(row) > 7 else ""
+    return Subscription(
+        name=row[0],
+        amount=float(row[1] or 0),
+        category=row[2],
+        type=row[3] or "Expense",
+        frequency=row[4] or "Monthly",
+        day=int(row[5] or 1),
+        month=_int_or_none(row[6] if len(row) > 6 else ""),
+        last_charged=date.fromisoformat(lc) if lc else None,
+        active=str(row[8]).strip().upper() == "TRUE" if len(row) > 8 else True,
+        notes=row[9] if len(row) > 9 else "",
+        row=row_index,
+    )
+
+
+def _sub_fields_to_row(fields: dict, last_charged: date) -> list:
+    return [
+        fields["name"], fields["amount"], fields["category"], fields["type"],
+        fields["frequency"], fields["day"],
+        fields["month"] if fields["month"] is not None else "",
+        last_charged.isoformat(), "TRUE", fields.get("notes", ""),
+    ]
+
+
+def ensure_subs_tab():
+    ss = get_spreadsheet()
+    try:
+        return ss.worksheet(SUBS_SHEET)
+    except Exception:
+        ws = ss.add_worksheet(title=SUBS_SHEET, rows=200, cols=len(SUBS_HEADERS))
+        ws.update("A1", [SUBS_HEADERS], value_input_option="USER_ENTERED")
+        return ws
+
+
+def list_subscriptions() -> list[Subscription]:
+    ws = ensure_subs_tab()
+    subs: list[Subscription] = []
+    for i, row in enumerate(ws.get_all_values()[1:], start=2):
+        if row and row[0].strip():
+            try:
+                subs.append(_row_to_sub(row, i))
+            except (ValueError, IndexError):
+                logger.exception("Bad subscription row %d: %r", i, row)
+    return subs
+
+
+def add_subscription(fields: dict, last_charged: date) -> None:
+    ws = ensure_subs_tab()
+    ws.append_row(_sub_fields_to_row(fields, last_charged),
+                  value_input_option="USER_ENTERED")
+
+
+def _find_row(name: str) -> int | None:
+    for s in list_subscriptions():
+        if s.name.lower() == name.lower():
+            return s.row
+    return None
+
+
+def remove_subscription(name: str) -> bool:
+    ws = ensure_subs_tab()
+    row = _find_row(name)
+    if row is None:
+        return False
+    ws.delete_rows(row)
+    return True
+
+
+def toggle_subscription(name: str) -> bool | None:
+    """Flip Active; return the new state, or None if not found."""
+    ws = ensure_subs_tab()
+    for s in list_subscriptions():
+        if s.name.lower() == name.lower():
+            new_state = not s.active
+            ws.update_cell(s.row, 9, "TRUE" if new_state else "FALSE")
+            return new_state
+    return None
+
+
+def set_last_charged(row: int, when: date) -> None:
+    ensure_subs_tab().update_cell(row, 8, when.isoformat())
+
+
+def upcoming_subscriptions(today: date, days: int = 30) -> list[tuple[Subscription, date]]:
+    """Active subscriptions whose next charge falls within `days` of `today`."""
+    from datetime import timedelta
+    horizon = today + timedelta(days=days)
+    out: list[tuple[Subscription, date]] = []
+    for s in list_subscriptions():
+        if not s.active:
+            continue
+        base = s.last_charged or today
+        nxt = next_due_date(base, s.frequency, s.day, s.month)
+        if today <= nxt <= horizon:
+            out.append((s, nxt))
+    return sorted(out, key=lambda t: t[1])
