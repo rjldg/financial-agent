@@ -10,7 +10,7 @@ from telegram.ext import (
 
 from app.config import TELEGRAM_TOKEN
 from app.bot.handlers.reports import start_handler, summary_handler, months_handler
-from app.bot.handlers.transactions import message_handler, quickfix_callback, undo_handler
+from app.bot.handlers.transactions import message_handler, photo_handler, quickfix_callback, undo_handler
 
 logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s", level=logging.INFO,
@@ -41,6 +41,7 @@ def build_application():
     app.add_handler(CommandHandler("search", search_handler))
     app.add_handler(CommandHandler("insights", insights_handler))
     app.add_handler(CommandHandler("ask", ask_handler))
+    app.add_handler(MessageHandler(filters.PHOTO, photo_handler))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
     return app
 

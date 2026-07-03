@@ -9,7 +9,7 @@ from telegram.ext import ContextTypes
 from app.config import ALLOWED_USER_ID, now_local
 from app.formatting import format_money
 from app.insights import compose_query_answer
-from app.llm_parser import RateLimitError, route_message
+from app.llm_parser import RateLimitError, parse_receipt, route_message
 from app.sheets import transactions as tx
 from app.sheets.transactions import append_transaction, get_monthly_summary
 from app.bot.keyboards import parse_callback, quick_fix_keyboard, category_picker_keyboard
@@ -118,3 +118,33 @@ async def undo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     tx.delete_transaction_row(ym, row)
     desc = vals[1] if len(vals) > 1 else ""
     await update.message.reply_text(f"↩️ Undid last entry: {desc}")
+
+
+async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not is_authorised(update):
+        return
+    await update.message.reply_text("🧾 Reading receipt …")
+    try:
+        tg_file = await update.message.photo[-1].get_file()
+        data = bytes(await tg_file.download_as_bytearray())
+        txn = await parse_receipt(data)
+    except RateLimitError:
+        await update.message.reply_text("⏳ The AI service is unavailable. Try again later.")
+        return
+    except Exception:
+        logger.exception("Receipt parsing failed")
+        await update.message.reply_text("❌ Couldn't read the receipt — try typing it instead.")
+        return
+    now = now_local().strftime("%Y-%m-%d %H:%M")
+    ym = now[:7]
+    try:
+        row = append_transaction(date=now, description=txn.description,
+                                 category=txn.category, amount=txn.amount, txn_type=txn.type)
+    except Exception:
+        logger.exception("Append from receipt failed")
+        await update.message.reply_text("❌ I read the receipt but couldn't save it.")
+        return
+    await update.message.reply_text(
+        f"✅ {format_money(txn.amount)} ({txn.category}) — {txn.description}",
+        reply_markup=quick_fix_keyboard(ym, row),
+    )
