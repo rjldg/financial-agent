@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import asyncio
 import json
 import logging
@@ -159,3 +160,36 @@ async def route_message(text: str) -> RouterResult:
     except Exception:
         logger.error("Router parse failed for content: %s", content)
         return RouterResult(intent="unknown")
+
+
+_RECEIPT_PROMPT = (
+    "You read receipts. Extract the grand total amount, a short merchant/description, "
+    "the best-matching category from: Food, Transport, Bills, Salary, Entertainment, "
+    "Shopping, Health, Utilities, Rent, Freelance, Dating, Other, and type 'Expense'. "
+    'Respond with ONLY JSON: {"amount":<number>,"category":"<allowed>",'
+    '"description":"<string>","type":"Expense"}'
+)
+
+
+def build_image_data_uri(image_bytes: bytes, mime: str = "image/jpeg") -> str:
+    """Encode image bytes as an OpenAI-compatible data URI."""
+    b64 = base64.b64encode(image_bytes).decode("ascii")
+    return f"data:{mime};base64,{b64}"
+
+
+def parse_receipt_response(content: str) -> Transaction:
+    """Parse a receipt LLM response (possibly fenced) into a Transaction."""
+    return Transaction.model_validate_json(_strip_fences(content))
+
+
+async def parse_receipt(image_bytes: bytes, mime: str = "image/jpeg") -> Transaction:
+    """Extract a Transaction from a receipt image using the local vision model."""
+    uri = build_image_data_uri(image_bytes, mime)
+    content = await _chat([
+        {"role": "system", "content": _RECEIPT_PROMPT},
+        {"role": "user", "content": [
+            {"type": "text", "text": "Extract the transaction from this receipt."},
+            {"type": "image_url", "image_url": {"url": uri}},
+        ]},
+    ])
+    return parse_receipt_response(content)
