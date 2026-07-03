@@ -25,6 +25,13 @@ def build_application():
     app.add_handler(CommandHandler("months", months_handler))
     from app.bot.handlers.reports import rebuild_handler
     app.add_handler(CommandHandler("rebuild", rebuild_handler))
+    from app.bot.handlers.subscriptions import (
+        addsub_handler, subs_handler, rmsub_handler, togglesub_handler,
+    )
+    app.add_handler(CommandHandler("addsub", addsub_handler))
+    app.add_handler(CommandHandler("subs", subs_handler))
+    app.add_handler(CommandHandler("rmsub", rmsub_handler))
+    app.add_handler(CommandHandler("togglesub", togglesub_handler))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
     return app
 
