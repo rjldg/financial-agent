@@ -44,7 +44,7 @@ def top_categories(totals: dict[str, float], *, limit: int = 5) -> list[tuple[st
 
 
 # --- Sheets I/O (append below the pure functions) ---
-from app.sheets.client import batch_update, get_spreadsheet  # noqa: E402
+from app.sheets.client import MONEY_PATTERN, batch_update, get_spreadsheet  # noqa: E402
 from app.sheets.transactions import get_monthly_summary, list_monthly_sheets  # noqa: E402
 
 
@@ -185,7 +185,7 @@ def rebuild_dashboard(year: int | None = None) -> None:
         theme.solid_fill(sid, 4, 5, 0, 4, theme.COLORS["band"], bold=True),
         {"repeatCell": {"range": {"sheetId": sid, "startRowIndex": 4, "endRowIndex": 5,
                                   "startColumnIndex": 0, "endColumnIndex": 4},
-                        "cell": {"userEnteredFormat": {"numberFormat": {"type": "NUMBER", "pattern": '"₱"#,##0.00'}}},
+                        "cell": {"userEnteredFormat": {"numberFormat": {"type": "NUMBER", "pattern": MONEY_PATTERN}}},
                         "fields": "userEnteredFormat.numberFormat"}},
     ]
 
@@ -235,7 +235,7 @@ def rebuild_dashboard(year: int | None = None) -> None:
                                       "endRowIndex": 4 + len(block), "startColumnIndex": 6,
                                       "endColumnIndex": 7},
                             "cell": {"userEnteredFormat": {"numberFormat":
-                                     {"type": "NUMBER", "pattern": '"₱"#,##0.00'}}},
+                                     {"type": "NUMBER", "pattern": MONEY_PATTERN}}},
                             "fields": "userEnteredFormat.numberFormat"}},
         ])
     except Exception:
@@ -261,7 +261,7 @@ def rebuild_dashboard(year: int | None = None) -> None:
                                       "endRowIndex": 4 + len(block), "startColumnIndex": 9,
                                       "endColumnIndex": 11},
                             "cell": {"userEnteredFormat": {"numberFormat":
-                                     {"type": "NUMBER", "pattern": '"₱"#,##0.00'}}},
+                                     {"type": "NUMBER", "pattern": MONEY_PATTERN}}},
                             "fields": "userEnteredFormat.numberFormat"}},
         ])
     except Exception:

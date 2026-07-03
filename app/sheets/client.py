@@ -5,9 +5,12 @@ import logging
 
 import gspread
 
-from app.config import GOOGLE_SHEETS_CREDENTIALS_FILE, SHEET_ID
+from app.config import CURRENCY_SYMBOL, GOOGLE_SHEETS_CREDENTIALS_FILE, SHEET_ID
 
 logger = logging.getLogger(__name__)
+
+# Sheets number-format pattern for monetary cells, honoring the configured symbol.
+MONEY_PATTERN = f'"{CURRENCY_SYMBOL}"#,##0.00'
 
 _spreadsheet: gspread.Spreadsheet | None = None
 

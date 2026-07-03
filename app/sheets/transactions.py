@@ -9,7 +9,7 @@ from gspread.exceptions import APIError, WorksheetNotFound
 from app.models import MonthlySummary
 from app.sheets import theme
 from app.sheets.client import (
-    batch_update, fmt_bold, get_spreadsheet, grid_range, invalidate, num_fmt,
+    MONEY_PATTERN, batch_update, fmt_bold, get_spreadsheet, grid_range, invalidate, num_fmt,
 )
 
 logger = logging.getLogger(__name__)
@@ -67,10 +67,10 @@ def _setup_headers_and_formulas(ws, year_month: str) -> None:
         fmt_bold(sid, 5, 7, 6, 7),
         fmt_bold(sid, 8, 9, 6, 7),
         {"repeatCell": {"range": grid_range(sid, 1, 500, 3, 4),
-                        "cell": num_fmt('"₱"#,##0.00'),
+                        "cell": num_fmt(MONEY_PATTERN),
                         "fields": "userEnteredFormat.numberFormat"}},
         {"repeatCell": {"range": grid_range(sid, 1, cat_end_0, 7, 8),
-                        "cell": num_fmt('"₱"#,##0.00'),
+                        "cell": num_fmt(MONEY_PATTERN),
                         "fields": "userEnteredFormat.numberFormat"}},
         {"setDataValidation": {"range": grid_range(sid, 1, 500, 2, 3),
                                "rule": {"condition": {"type": "ONE_OF_LIST",
@@ -195,7 +195,14 @@ def get_last_transaction(year_month: str):
 def delete_transaction_row(year_month: str, row: int) -> None:
     ss = get_spreadsheet()
     ws = ss.worksheet(year_month)
-    ws.delete_rows(row)
+    # Clear only the transaction columns (A:E) in place — do NOT delete the whole
+    # grid row. The live monthly summary/formulas live in columns G:H on the same
+    # rows, so a full-row delete would corrupt them (breaking the running-balance
+    # chain into later months) and shift every later transaction up, invalidating
+    # the absolute row indices baked into already-sent inline quick-fix keyboards.
+    # Clearing in place preserves both; the append logic tolerates the gap because
+    # it appends after the last non-empty row in column A.
+    ws.batch_clear([f"A{row}:E{row}"])
     _reindex(year_month)
 
 
