@@ -2,6 +2,8 @@ services:
   bot:
     build: .
     env_file: .env
+    environment:
+      - TZ=Asia/Manila
     volumes:
       # Mount your service-account JSON into the container.
       # Make sure the filename matches GOOGLE_SHEETS_CREDENTIALS_FILE in .env.
