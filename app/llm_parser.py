@@ -5,57 +5,15 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from typing import Literal
-
 import httpx
-from pydantic import BaseModel, Field
-
 from app.config import OLLAMA_BASE_URL, OLLAMA_MODEL
+from app.models import Transaction
 
 logger = logging.getLogger(__name__)
 
 
 class RateLimitError(Exception):
     """Raised when the LLM API is unavailable after retries."""
-
-
-# The exact set of allowed categories — must match _FORMULA_CATEGORIES in sheets_db.py
-Category = Literal[
-    "Food",
-    "Transport",
-    "Bills",
-    "Salary",
-    "Entertainment",
-    "Shopping",
-    "Health",
-    "Utilities",
-    "Rent",
-    "Freelance",
-    "Dating",
-    "Other",
-]
-
-
-class Transaction(BaseModel):
-    """Structured financial transaction extracted from natural language."""
-
-    amount: float = Field(..., description="The monetary amount (always positive).")
-    category: Category = Field(
-        ...,
-        description=(
-            "MUST be exactly one of: Food, Transport, Bills, Salary, "
-            "Entertainment, Shopping, Health, Utilities, Rent, Freelance, "
-            "Dating, Other. Do NOT invent new categories."
-        ),
-    )
-    description: str = Field(
-        ...,
-        description="A short human-readable summary, e.g. 'McDo lunch'.",
-    )
-    type: Literal["Income", "Expense"] = Field(
-        ...,
-        description="'Income' if the user received money, 'Expense' if they spent it.",
-    )
 
 
 _SYSTEM_PROMPT = (

@@ -17,7 +17,7 @@ from telegram.ext import (
 
 from app.config import ALLOWED_USER_ID, TELEGRAM_TOKEN
 from app.llm_parser import RateLimitError, parse_transaction
-from app.sheets_db import append_transaction, get_monthly_summary, list_monthly_sheets
+from app.sheets import append_transaction, get_monthly_summary, list_monthly_sheets
 
 logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
