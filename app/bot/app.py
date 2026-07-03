@@ -32,6 +32,9 @@ def build_application():
     app.add_handler(CommandHandler("subs", subs_handler))
     app.add_handler(CommandHandler("rmsub", rmsub_handler))
     app.add_handler(CommandHandler("togglesub", togglesub_handler))
+    from app.bot.handlers.budgets import setbudget_handler, budgets_handler
+    app.add_handler(CommandHandler("setbudget", setbudget_handler))
+    app.add_handler(CommandHandler("budgets", budgets_handler))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
     return app
 
