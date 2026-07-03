@@ -18,3 +18,26 @@ GOOGLE_SHEETS_CREDENTIALS_FILE: str = os.environ.get(
     "GOOGLE_SHEETS_CREDENTIALS_FILE", "service_account.json"
 )
 SHEET_ID: str = os.environ["SHEET_ID"]
+# --- Localization ---
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+APP_TIMEZONE: str = os.environ.get("APP_TIMEZONE", "Asia/Manila")
+TZ = ZoneInfo(APP_TIMEZONE)
+
+
+def now_local() -> datetime:
+    """Current time in the configured application timezone."""
+    return datetime.now(tz=TZ)
+
+
+CURRENCY_CODE: str = os.environ.get("CURRENCY_CODE", "PHP")
+CURRENCY_SYMBOL: str = os.environ.get("CURRENCY_SYMBOL", "₱")
+
+# --- Scheduling ---
+WEEKLY_DIGEST_DAY: str = os.environ.get("WEEKLY_DIGEST_DAY", "mon")  # mon..sun
+WEEKLY_DIGEST_HOUR: int = int(os.environ.get("WEEKLY_DIGEST_HOUR", "8"))
+SUB_CHECK_HOUR: int = int(os.environ.get("SUB_CHECK_HOUR", "8"))
+
+# --- Budgets ---
+BUDGET_ALERT_THRESHOLD: float = float(os.environ.get("BUDGET_ALERT_THRESHOLD", "0.8"))
