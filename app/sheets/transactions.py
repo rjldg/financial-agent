@@ -99,7 +99,7 @@ def _setup_headers_and_formulas(ws, year_month: str) -> None:
 
 
 def append_transaction(date: str, description: str, category: str,
-                       amount: float, txn_type: str) -> None:
+                       amount: float, txn_type: str) -> int:
     year_month = date[:7]
     try:
         ws = get_or_create_monthly_sheet(year_month)
@@ -108,11 +108,8 @@ def append_transaction(date: str, description: str, category: str,
         ws.update(f"A{next_row}:E{next_row}",
                   [[date, description, category, amount, txn_type]],
                   value_input_option="USER_ENTERED")
-        try:
-            from app.sheets import dashboard  # local import breaks the cycle
-            dashboard.update_month(year_month)
-        except Exception:
-            logger.exception("Index update failed (non-fatal) for %s", year_month)
+        _reindex(year_month)
+        return next_row
     except APIError:
         invalidate()
         raise
@@ -160,3 +157,65 @@ def list_monthly_sheets() -> list[str]:
         if len(title) == 7 and title[4] == "-" and title[:4].isdigit() and title[5:].isdigit():
             names.append(title)
     return sorted(names)
+
+
+def _reindex(year_month: str) -> None:
+    try:
+        from app.sheets import dashboard  # local import breaks the cycle
+        dashboard.update_month(year_month)
+    except Exception:
+        logger.exception("Index update failed (non-fatal) for %s", year_month)
+
+
+def get_last_transaction(year_month: str):
+    """Return (row_index, [Date, Description, Category, Amount, Type]) or None."""
+    ss = get_spreadsheet()
+    try:
+        ws = ss.worksheet(year_month)
+    except WorksheetNotFound:
+        return None
+    col_a = ws.col_values(1)
+    if len(col_a) < 2:  # only the header
+        return None
+    row = len(col_a)
+    vals = ws.get(f"A{row}:E{row}")
+    return (row, vals[0] if vals else [])
+
+
+def delete_transaction_row(year_month: str, row: int) -> None:
+    ss = get_spreadsheet()
+    ws = ss.worksheet(year_month)
+    ws.delete_rows(row)
+    _reindex(year_month)
+
+
+def update_transaction_category(year_month: str, row: int, category: str) -> None:
+    ss = get_spreadsheet()
+    ws = ss.worksheet(year_month)
+    ws.update_cell(row, 3, category)
+    _reindex(year_month)
+
+
+def toggle_transaction_type(year_month: str, row: int) -> str:
+    ss = get_spreadsheet()
+    ws = ss.worksheet(year_month)
+    current = ws.cell(row, 5).value
+    new_type = "Income" if current == "Expense" else "Expense"
+    ws.update_cell(row, 5, new_type)
+    _reindex(year_month)
+    return new_type
+
+
+def search_transactions(term: str, limit: int = 20) -> list[tuple]:
+    """Scan monthly tabs newest-first, return rows whose desc/category matches `term`."""
+    from app.insights import row_matches
+    results: list[tuple] = []
+    for ym in reversed(list_monthly_sheets()):
+        ws = get_spreadsheet().worksheet(ym)
+        for r in ws.get_all_records(expected_headers=HEADERS):
+            desc, cat = str(r.get("Description", "")), str(r.get("Category", ""))
+            if row_matches(desc, cat, term):
+                results.append((ym, r.get("Date"), desc, cat, r.get("Amount"), r.get("Type")))
+                if len(results) >= limit:
+                    return results
+    return results
