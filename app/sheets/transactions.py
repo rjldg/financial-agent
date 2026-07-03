@@ -149,6 +149,16 @@ def get_monthly_summary(year_month: str) -> MonthlySummary:
     return summary
 
 
+def get_month_records(year_month: str) -> list[dict]:
+    """All data rows of a monthly tab as dicts; [] if the tab is missing."""
+    ss = get_spreadsheet()
+    try:
+        ws = ss.worksheet(year_month)
+    except WorksheetNotFound:
+        return []
+    return ws.get_all_records(expected_headers=HEADERS)
+
+
 def list_monthly_sheets() -> list[str]:
     ss = get_spreadsheet()
     names: list[str] = []

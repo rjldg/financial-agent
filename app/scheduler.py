@@ -6,7 +6,7 @@ import logging
 
 from telegram.ext import Application, ContextTypes
 
-from app.config import ALLOWED_USER_ID, SUB_CHECK_HOUR, TZ, now_local
+from app.config import ALLOWED_USER_ID, SUB_CHECK_HOUR, TZ, WEEKLY_DIGEST_DAY, WEEKLY_DIGEST_HOUR, now_local
 from app.formatting import format_money
 
 logger = logging.getLogger(__name__)
@@ -48,6 +48,33 @@ def compose_weekly_digest(week_total: float, week_by_cat: dict[str, float],
         lines.append("Upcoming (7d): " + ", ".join(
             f"{name} {format_money(amt)} ({d.isoformat()})" for name, amt, d in upcoming))
     return "\n".join(lines)
+
+
+def build_weekly_digest(today: dt.date | None = None) -> str:
+    from app.sheets.subscriptions import upcoming_subscriptions
+    from app.sheets.transactions import get_month_records
+    if today is None:
+        today = now_local().date()
+    records = get_month_records(today.strftime("%Y-%m"))
+    # include previous month too if the 7-day window crosses a boundary
+    if (today - dt.timedelta(days=7)).month != today.month:
+        prev = (today.replace(day=1) - dt.timedelta(days=1)).strftime("%Y-%m")
+        records = get_month_records(prev) + records
+    total, by_cat = filter_recent_expense(records, today, days=7)
+    upcoming = [(s.name, s.amount, when) for s, when in upcoming_subscriptions(today, days=7)]
+    return compose_weekly_digest(total, by_cat, upcoming, today)
+
+
+async def _run_weekly_digest(context: ContextTypes.DEFAULT_TYPE) -> None:
+    # Only fire on the configured weekday (avoids run_daily day-index ambiguity).
+    if now_local().strftime("%a").lower() != WEEKLY_DIGEST_DAY.lower()[:3]:
+        return
+    try:
+        text = build_weekly_digest()
+    except Exception:
+        logger.exception("Weekly digest build failed")
+        return
+    await context.bot.send_message(chat_id=ALLOWED_USER_ID, text=text, parse_mode="Markdown")
 
 
 def process_due_subscriptions(today: dt.date | None = None) -> list[tuple[str, dt.date, float, str]]:
@@ -106,4 +133,5 @@ def register_jobs(application: Application) -> None:
     jq = application.job_queue
     jq.run_once(_run_subscription_check, when=5)  # startup catch-up
     jq.run_daily(_run_subscription_check, time=dt.time(hour=SUB_CHECK_HOUR, tzinfo=TZ))
+    jq.run_daily(_run_weekly_digest, time=dt.time(hour=WEEKLY_DIGEST_HOUR, tzinfo=TZ))
     logger.info("Registered subscription jobs (startup + daily @ %02d:00)", SUB_CHECK_HOUR)
