@@ -240,3 +240,29 @@ def rebuild_dashboard(year: int | None = None) -> None:
         ])
     except Exception:
         logger.exception("Upcoming-subscriptions dashboard block failed (non-fatal)")
+
+    # --- Budget status (current month), placed in columns I:K ---
+    try:
+        from datetime import datetime as _dt2
+        from app.sheets.budgets import get_budgets, budget_status
+        ym = _dt2.now(tz=TZ).strftime("%Y-%m")
+        limits = get_budgets()
+        spent = get_monthly_summary(ym).category_totals if limits else {}
+        block = [["Budget Status", "Spent", "Limit"]]
+        for s in budget_status(spent, limits):
+            block.append([s.category, s.spent, s.limit])
+        if len(block) == 1:
+            block.append(["(no budgets set)", "", ""])
+        dash.update("I4", block, value_input_option="USER_ENTERED")
+        batch_update([
+            theme.solid_fill(sid, 3, 4, 8, 11, theme.COLORS["header"],
+                             text=theme.COLORS["white"], bold=True),
+            {"repeatCell": {"range": {"sheetId": sid, "startRowIndex": 4,
+                                      "endRowIndex": 4 + len(block), "startColumnIndex": 9,
+                                      "endColumnIndex": 11},
+                            "cell": {"userEnteredFormat": {"numberFormat":
+                                     {"type": "NUMBER", "pattern": '"₱"#,##0.00'}}},
+                            "fields": "userEnteredFormat.numberFormat"}},
+        ])
+    except Exception:
+        logger.exception("Budget-status dashboard block failed (non-fatal)")
