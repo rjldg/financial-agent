@@ -108,6 +108,11 @@ def append_transaction(date: str, description: str, category: str,
         ws.update(f"A{next_row}:E{next_row}",
                   [[date, description, category, amount, txn_type]],
                   value_input_option="USER_ENTERED")
+        try:
+            from app.sheets import dashboard  # local import breaks the cycle
+            dashboard.update_month(year_month)
+        except Exception:
+            logger.exception("Index update failed (non-fatal) for %s", year_month)
     except APIError:
         invalidate()
         raise
