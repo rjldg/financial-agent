@@ -7,7 +7,7 @@ import json
 import logging
 import httpx
 from app.config import OLLAMA_BASE_URL, OLLAMA_MODEL
-from app.models import Transaction
+from app.models import RouterResult, Transaction
 
 logger = logging.getLogger(__name__)
 
@@ -92,3 +92,70 @@ async def parse_transaction(text: str) -> Transaction:
     raise RateLimitError(
         f"Could not reach Ollama at {OLLAMA_BASE_URL} after {_MAX_RETRIES} retries."
     ) from last_exc
+
+
+def _strip_fences(content: str) -> str:
+    content = content.strip()
+    if content.startswith("```"):
+        content = content.split("\n", 1)[1] if "\n" in content else content[3:]
+    if content.endswith("```"):
+        content = content[:-3]
+    return content.strip()
+
+
+async def _chat(messages: list[dict], *, temperature: float = 0.1) -> str:
+    """POST to Ollama's chat endpoint with retry/backoff; return message content."""
+    last_exc: Exception | None = None
+    for attempt in range(_MAX_RETRIES):
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    f"{OLLAMA_BASE_URL}/v1/chat/completions",
+                    json={"model": OLLAMA_MODEL, "messages": messages,
+                          "temperature": temperature, "stream": False},
+                )
+                response.raise_for_status()
+            return response.json()["choices"][0]["message"]["content"]
+        except (httpx.ConnectError, httpx.TimeoutException) as exc:
+            delay = _BASE_DELAY * (2 ** attempt)
+            logger.warning("Ollama connection failed. Retry %d/%d in %ds: %s",
+                           attempt + 1, _MAX_RETRIES, delay, exc)
+            last_exc = exc
+            await asyncio.sleep(delay)
+    raise RateLimitError(
+        f"Could not reach Ollama at {OLLAMA_BASE_URL} after {_MAX_RETRIES} retries."
+    ) from last_exc
+
+
+_ROUTER_PROMPT = (
+    "You are a finance assistant router. Classify the user's message and respond "
+    "with ONLY a JSON object, no other text.\n\n"
+    "Allowed categories: Food, Transport, Bills, Salary, Entertainment, Shopping, "
+    "Health, Utilities, Rent, Freelance, Dating, Other. Map synonyms (Groceries->Food, "
+    "Commute->Transport, etc). Never invent categories.\n\n"
+    "If the user is recording one or more spends/incomes, use intent 'log' and fill "
+    "'transactions' (support MULTIPLE items in one message):\n"
+    '{"intent":"log","transactions":[{"amount":<number>,"category":"<allowed>",'
+    '"description":"<short>","type":"Income|Expense"}]}\n\n'
+    "If the user is ASKING a question about their finances, use intent 'query':\n"
+    '{"intent":"query","query":{"metric":"spend|income|net|count",'
+    '"category":<allowed-or-null>,"period":<"YYYY-MM"-or-null>}}\n\n'
+    "If neither applies: {\"intent\":\"unknown\"}"
+)
+
+
+def parse_router_response(content: str) -> RouterResult:
+    """Parse a router LLM response (possibly fenced) into a RouterResult."""
+    return RouterResult.model_validate_json(_strip_fences(content))
+
+
+async def route_message(text: str) -> RouterResult:
+    """Classify + extract a message via the local LLM. Never raises on bad JSON."""
+    content = await _chat(
+        [{"role": "system", "content": _ROUTER_PROMPT}, {"role": "user", "content": text}]
+    )
+    try:
+        return parse_router_response(content)
+    except Exception:
+        logger.error("Router parse failed for content: %s", content)
+        return RouterResult(intent="unknown")

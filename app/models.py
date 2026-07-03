@@ -71,3 +71,18 @@ class BudgetStatus:
     @property
     def ratio(self) -> float:
         return self.spent / self.limit if self.limit else 0.0
+
+
+from typing import Optional as _Optional  # noqa: E402
+
+
+class QuerySpec(BaseModel):
+    metric: Literal["spend", "income", "net", "count"]
+    category: _Optional[str] = None
+    period: _Optional[str] = None  # "YYYY-MM"
+
+
+class RouterResult(BaseModel):
+    intent: Literal["log", "query", "unknown"]
+    transactions: list[Transaction] = Field(default_factory=list)
+    query: _Optional[QuerySpec] = None
