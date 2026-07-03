@@ -41,6 +41,11 @@ def main() -> None:
         dashboard.ensure_core_tabs()
     except Exception:
         logger.exception("Could not ensure core tabs at startup (continuing)")
+    try:
+        from app.scheduler import register_jobs
+        register_jobs(app)
+    except Exception:
+        logger.exception("Could not register scheduled jobs (continuing)")
     logger.info("Bot started — listening for messages …")
     app.run_polling()
 
