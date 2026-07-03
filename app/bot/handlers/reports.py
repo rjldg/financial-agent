@@ -11,6 +11,24 @@ from app.sheets import get_monthly_summary, list_monthly_sheets
 
 logger = logging.getLogger(__name__)
 
+COMMANDS: list[tuple[str, str]] = [
+    ("start", "Welcome + quick guide"),
+    ("help", "List every command"),
+    ("summary", "Monthly report (/summary YYYY-MM)"),
+    ("months", "List tracked months"),
+    ("insights", "Top spend + month-over-month"),
+    ("ask", "Ask a finance question"),
+    ("search", "Find transactions by keyword"),
+    ("addsub", "Add a subscription"),
+    ("subs", "List subscriptions"),
+    ("rmsub", "Remove a subscription"),
+    ("togglesub", "Pause/resume a subscription"),
+    ("setbudget", "Set a category budget"),
+    ("budgets", "Show budgets vs spend"),
+    ("undo", "Remove your last entry"),
+    ("rebuild", "Rebuild the dashboard"),
+]
+
 
 def is_authorised(update: Update) -> bool:
     return update.effective_user is not None and update.effective_user.id == ALLOWED_USER_ID
@@ -20,17 +38,23 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     if not is_authorised(update):
         return
     await update.message.reply_text(
-        "👋 Hi! I'm your personal finance tracker.\n\n"
-        "Just send me a message like:\n"
-        '  • "Spent 150 on lunch at McDo"\n'
-        '  • "Got my 600k salary"\n'
-        '  • "Paid 500 for electricity bill"\n\n'
-        "I'll log it to your Google Sheet automatically.\n\n"
-        "Commands:\n"
-        "  /summary — this month's financial report\n"
-        "  /summary 2026-03 — report for a specific month\n"
-        "  /months — list all tracked months"
+        "👋 *Personal Finance Tracker*\n\n"
+        "Just text me naturally:\n"
+        '  • "Spent 150 on lunch and 90 on grab"\n'
+        '  • "Got my 48k salary"\n'
+        "  • or send a 🧾 *receipt photo*\n\n"
+        "Ask me things: _how much did I spend on food this month?_\n\n"
+        "Subscriptions auto-log monthly/yearly. Set budgets to get alerts.\n"
+        "Type /help for the full command list.",
+        parse_mode="Markdown",
     )
+
+
+async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not is_authorised(update):
+        return
+    lines = ["*Commands:*"] + [f"  /{name} — {desc}" for name, desc in COMMANDS]
+    await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
 
 
 async def summary_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

@@ -9,7 +9,7 @@ from telegram.ext import (
 )
 
 from app.config import TELEGRAM_TOKEN
-from app.bot.handlers.reports import start_handler, summary_handler, months_handler
+from app.bot.handlers.reports import start_handler, summary_handler, months_handler, help_handler, COMMANDS
 from app.bot.handlers.transactions import message_handler, photo_handler, quickfix_callback, undo_handler
 
 logging.basicConfig(
@@ -18,9 +18,16 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+async def _post_init(application) -> None:
+    from telegram import BotCommand
+    from app.bot.handlers.reports import COMMANDS
+    await application.bot.set_my_commands([BotCommand(n, d) for n, d in COMMANDS])
+
+
 def build_application():
-    app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
+    app = ApplicationBuilder().token(TELEGRAM_TOKEN).post_init(_post_init).build()
     app.add_handler(CommandHandler("start", start_handler))
+    app.add_handler(CommandHandler("help", help_handler))
     app.add_handler(CommandHandler("summary", summary_handler))
     app.add_handler(CommandHandler("months", months_handler))
     from app.bot.handlers.reports import rebuild_handler
