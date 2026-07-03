@@ -215,3 +215,28 @@ def rebuild_dashboard(year: int | None = None) -> None:
             "widthPixels": 620, "heightPixels": 300}}}}})
 
     batch_update(reqs)
+
+    # --- Upcoming subscriptions (next 30 days), placed in columns F:G ---
+    try:
+        from datetime import datetime as _dt
+        from app.sheets.subscriptions import upcoming_subscriptions
+        today = _dt.now(tz=TZ).date()
+        upcoming = upcoming_subscriptions(today, days=30)
+        block = [["Upcoming Subscriptions", ""]]
+        for s, when in upcoming:
+            block.append([f"{s.name} · {when.isoformat()}", s.amount])
+        if len(block) == 1:
+            block.append(["(none in next 30 days)", ""])
+        dash.update("F4", block, value_input_option="USER_ENTERED")
+        batch_update([
+            theme.solid_fill(sid, 3, 4, 5, 7, theme.COLORS["header"],
+                             text=theme.COLORS["white"], bold=True),
+            {"repeatCell": {"range": {"sheetId": sid, "startRowIndex": 4,
+                                      "endRowIndex": 4 + len(block), "startColumnIndex": 6,
+                                      "endColumnIndex": 7},
+                            "cell": {"userEnteredFormat": {"numberFormat":
+                                     {"type": "NUMBER", "pattern": '"₱"#,##0.00'}}},
+                            "fields": "userEnteredFormat.numberFormat"}},
+        ])
+    except Exception:
+        logger.exception("Upcoming-subscriptions dashboard block failed (non-fatal)")
