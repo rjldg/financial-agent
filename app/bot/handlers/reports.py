@@ -79,3 +79,17 @@ async def months_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         f"📅 *Tracked Months:*\n{listing}\n\nUse /summary YYYY-MM to view a specific month.",
         parse_mode="Markdown",
     )
+
+
+async def rebuild_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not is_authorised(update):
+        return
+    await update.message.reply_text("🔧 Rebuilding dashboard …")
+    try:
+        from app.sheets import dashboard
+        dashboard.rebuild_dashboard()
+    except Exception:
+        logger.exception("Dashboard rebuild failed")
+        await update.message.reply_text("❌ Rebuild failed. Check the logs.")
+        return
+    await update.message.reply_text("✅ Dashboard rebuilt.")

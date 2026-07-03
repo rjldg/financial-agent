@@ -110,3 +110,108 @@ def read_index_rows() -> list[tuple[str, float, float, float, float]]:
             except ValueError:
                 continue
     return out
+
+
+def ensure_core_tabs() -> None:
+    """Create the Dashboard + hidden index tabs if missing; pin Dashboard first."""
+    ss = get_spreadsheet()
+    _get_or_create_hidden_index()
+    try:
+        dash = ss.worksheet(DASHBOARD_SHEET)
+    except Exception:
+        dash = ss.add_worksheet(title=DASHBOARD_SHEET, rows=60, cols=12)
+    batch_update([{
+        "updateSheetProperties": {
+            "properties": {"sheetId": dash.id, "index": 0},
+            "fields": "index",
+        }
+    }])
+
+
+def _ytd_category_totals(year: int) -> dict[str, float]:
+    """Sum expense-side category spend across the year's monthly tabs."""
+    from collections import defaultdict
+    acc: dict[str, float] = defaultdict(float)
+    for ym in list_monthly_sheets():
+        if not ym.startswith(f"{year}-"):
+            continue
+        s = get_monthly_summary(ym)
+        for cat, total in s.category_totals.items():
+            if cat != "Salary":  # exclude the main income category from "spending"
+                acc[cat] += total
+    return dict(acc)
+
+
+def rebuild_dashboard(year: int | None = None) -> None:
+    """Recompute _MonthlyIndex, then repaint the Dashboard tab."""
+    from datetime import datetime
+    from app.config import TZ
+    from app.formatting import format_money
+    from app.sheets import theme
+
+    if year is None:
+        year = datetime.now(tz=TZ).year
+
+    rows = rebuild_index()
+    ytd = ytd_totals(rows, year)
+    cats = top_categories(_ytd_category_totals(year), limit=5)
+
+    ss = get_spreadsheet()
+    ensure_core_tabs()
+    dash = ss.worksheet(DASHBOARD_SHEET)
+    sid = dash.id
+    dash.clear()
+
+    # --- Values ---
+    updated = datetime.now(tz=TZ).strftime("%Y-%m-%d %H:%M")
+    grid: list[list] = [["💰 Finance Overview", "", "", ""]]
+    grid.append([f"Year to date · {year}", f"updated {updated}", "", ""])
+    grid.append([])                                              # row 3 spacer
+    grid.append(["YTD Income", "YTD Expenses", "YTD Net", "Running Balance"])  # row 4 labels
+    grid.append([ytd["income"], ytd["expense"], ytd["net"], ytd["running"]])   # row 5 values
+    grid.append([])
+    grid.append(["Top Spending (YTD)", ""])                     # row 7
+    for cat, amt in cats:
+        grid.append([cat, amt])
+    dash.update("A1", grid, value_input_option="USER_ENTERED")
+
+    # --- Formatting ---
+    reqs: list[dict] = [
+        theme.solid_fill(sid, 0, 1, 0, 4, theme.COLORS["ink"], text=theme.COLORS["white"], bold=True),
+        theme.solid_fill(sid, 3, 4, 0, 1, theme.COLORS["card_income"], text=theme.COLORS["white"], bold=True),
+        theme.solid_fill(sid, 3, 4, 1, 2, theme.COLORS["card_expense"], text=theme.COLORS["white"], bold=True),
+        theme.solid_fill(sid, 3, 4, 2, 3, theme.COLORS["card_net"], text=theme.COLORS["white"], bold=True),
+        theme.solid_fill(sid, 3, 4, 3, 4, theme.COLORS["card_running"], text=theme.COLORS["white"], bold=True),
+        theme.solid_fill(sid, 4, 5, 0, 4, theme.COLORS["band"], bold=True),
+        {"repeatCell": {"range": {"sheetId": sid, "startRowIndex": 4, "endRowIndex": 5,
+                                  "startColumnIndex": 0, "endColumnIndex": 4},
+                        "cell": {"userEnteredFormat": {"numberFormat": {"type": "NUMBER", "pattern": '"₱"#,##0.00'}}},
+                        "fields": "userEnteredFormat.numberFormat"}},
+    ]
+
+    # --- 12-month trend chart from _MonthlyIndex ---
+    idx = ss.worksheet(INDEX_SHEET)
+    iid = idx.id
+    n = len(rows)
+    start = max(1, n - 11)  # last 12 data rows (index rows begin at sheet row 2 => index 1)
+    reqs.append({"addChart": {"chart": {"spec": {
+        "title": "12-Month Income vs Expenses",
+        "basicChart": {
+            "chartType": "COLUMN", "legendPosition": "BOTTOM_LEGEND",
+            "domains": [{"domain": {"sourceRange": {"sources": [
+                {"sheetId": iid, "startRowIndex": start, "endRowIndex": n + 1,
+                 "startColumnIndex": 0, "endColumnIndex": 1}]}}}],
+            "series": [
+                {"series": {"sourceRange": {"sources": [
+                    {"sheetId": iid, "startRowIndex": start, "endRowIndex": n + 1,
+                     "startColumnIndex": 1, "endColumnIndex": 2}]}}},
+                {"series": {"sourceRange": {"sources": [
+                    {"sheetId": iid, "startRowIndex": start, "endRowIndex": n + 1,
+                     "startColumnIndex": 2, "endColumnIndex": 3}]}}},
+            ],
+        }},
+        "position": {"overlayPosition": {
+            "anchorCell": {"sheetId": sid, "rowIndex": 14, "columnIndex": 0},
+            "widthPixels": 620, "heightPixels": 300}}}}})
+
+    batch_update(reqs)
