@@ -12,6 +12,44 @@ from app.formatting import format_money
 logger = logging.getLogger(__name__)
 
 
+def filter_recent_expense(records: list[dict], today: dt.date, days: int = 7):
+    """Sum expense records within the last `days` (inclusive), plus a by-category map."""
+    cutoff = today - dt.timedelta(days=days)
+    total = 0.0
+    by_cat: dict[str, float] = {}
+    for r in records:
+        raw = str(r.get("Date", "")).strip()[:10]
+        try:
+            rd = dt.date.fromisoformat(raw)
+        except ValueError:
+            continue
+        if rd < cutoff or rd > today:
+            continue
+        if str(r.get("Type", "")).strip() != "Expense":
+            continue
+        try:
+            amt = float(r.get("Amount", 0))
+        except (ValueError, TypeError):
+            continue
+        cat = str(r.get("Category", "Other")).strip() or "Other"
+        total += amt
+        by_cat[cat] = by_cat.get(cat, 0.0) + amt
+    return total, by_cat
+
+
+def compose_weekly_digest(week_total: float, week_by_cat: dict[str, float],
+                          upcoming: list[tuple[str, float, dt.date]], today: dt.date) -> str:
+    lines = [f"🗓 *Weekly Digest — {today.isoformat()}*",
+             f"Spent last 7 days: {format_money(week_total)}"]
+    if week_by_cat:
+        top = sorted(week_by_cat.items(), key=lambda kv: -kv[1])[:3]
+        lines.append("Top: " + ", ".join(f"{c} {format_money(v)}" for c, v in top))
+    if upcoming:
+        lines.append("Upcoming (7d): " + ", ".join(
+            f"{name} {format_money(amt)} ({d.isoformat()})" for name, amt, d in upcoming))
+    return "\n".join(lines)
+
+
 def process_due_subscriptions(today: dt.date | None = None) -> list[tuple[str, dt.date, float, str]]:
     """Post every due subscription charge and advance its LastCharged.
 
