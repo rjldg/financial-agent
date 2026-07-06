@@ -179,6 +179,27 @@ The `docker-compose.yml` mounts `service_account.json` read-only and loads `.env
 
 ---
 
+## ⬆️ Upgrading an Existing Deployment
+
+If you're updating a bot that's already running against a live Google Sheet (e.g. as an `nssm` Windows service), follow these steps:
+
+1. **Pull the new code** into your existing checkout.
+2. **Reinstall dependencies** in the *exact* environment your service runs from:
+   ```bash
+   pip install -r requirements.txt
+   ```
+   This is required — the timezone support needs the **`tzdata`** package (Windows has no built-in tz database), and scheduled jobs need the **`job-queue`** extra. If `tzdata` is missing the bot now falls back to UTC with a warning instead of crashing, but you should still install it. If the `job-queue` extra is missing, recurring subscriptions and the weekly digest are skipped (the bot logs a warning and keeps running).
+3. **Review new environment variables** (all optional, sensible defaults) in the **Environment Variables Reference** section below — e.g. `APP_TIMEZONE`, `CURRENCY_SYMBOL`, `USE_INTENT_ROUTER`, `ENABLE_RECEIPT_OCR`. Add any you want to override to your `.env`.
+4. **Restart the bot / service.** On first start it creates the `📊 Dashboard`, `⚙ Subscriptions`, `🎯 Budgets`, and a hidden `_MonthlyIndex` tab if missing, and pins the Dashboard to the front — this changes your tab order but never touches transaction data.
+5. **Restyle older monthly tabs** (optional): run **`/retheme`** in Telegram to apply the new Bold Finance theme to month tabs created before this version. New tabs are themed automatically. `/retheme` only changes formatting and is safe to re-run.
+6. **Refresh the dashboard** (optional): run **`/rebuild`** to populate the `📊 Dashboard` from your existing history.
+
+> **Tip:** Your existing transaction data is never rewritten or deleted by the upgrade. To be extra safe, you can first point `SHEET_ID` at a **copy** of your sheet, verify the bot starts and behaves as expected, then switch back to the real sheet.
+
+> **Behavior changes to expect:** dates are now recorded in `APP_TIMEZONE` (default `Asia/Manila`) instead of UTC, and each text message makes an extra "router" LLM call to classify log-vs-question and support multi-item logging. Set `USE_INTENT_ROUTER=false` to keep the original single-call logging behavior.
+
+---
+
 ## 🤖 Bot Commands
 
 | Command | Description |
