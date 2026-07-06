@@ -40,6 +40,71 @@ def get_or_create_monthly_sheet(year_month: str):
         return ws
 
 
+def _existing_cf_rule_count(sid: int) -> int:
+    """Best-effort count of conditional-format rules already on a sheet.
+
+    Returns 0 if the metadata can't be read, so callers degrade to the
+    (still safe) additive behavior rather than failing.
+    """
+    try:
+        meta = get_spreadsheet().fetch_sheet_metadata(
+            params={"fields": "sheets(properties(sheetId),conditionalFormats)"}
+        )
+        for sh in meta.get("sheets", []):
+            if sh.get("properties", {}).get("sheetId") == sid:
+                return len(sh.get("conditionalFormats", []) or [])
+    except Exception:
+        logger.info("Could not read conditional-format metadata for sheet %s", sid)
+    return 0
+
+
+def retheme_monthly_tab(ws) -> None:
+    """Apply the Bold Finance theme + currency format to an EXISTING monthly tab
+    without recreating it (data is untouched).
+
+    Idempotent: any pre-existing conditional-format rules are removed first so
+    repeated runs don't stack duplicates. Banding is applied separately as a
+    best-effort step because re-adding a banded range that overlaps an existing
+    one raises an API error.
+    """
+    sid = ws.id
+    # Remove existing conditional-format rules first (they are additive, so
+    # without this a second /retheme would stack duplicate rules).
+    n = _existing_cf_rule_count(sid)
+    reqs: list[dict] = [
+        {"deleteConditionalFormatRule": {"index": i, "sheetId": sid}}
+        for i in range(n - 1, -1, -1)
+    ]
+    reqs += theme.monthly_theme_requests(sid, include_banding=False)
+    reqs += [
+        {"repeatCell": {"range": grid_range(sid, 1, 500, 3, 4),
+                        "cell": num_fmt(MONEY_PATTERN),
+                        "fields": "userEnteredFormat.numberFormat"}},
+        {"repeatCell": {"range": grid_range(sid, 1, 21, 7, 8),
+                        "cell": num_fmt(MONEY_PATTERN),
+                        "fields": "userEnteredFormat.numberFormat"}},
+    ]
+    batch_update(reqs)
+    try:
+        batch_update([theme.banding(sid, 1, 500, 0, 5,
+                                    theme.COLORS["header"], theme.COLORS["band"])])
+    except Exception:
+        logger.info("Banding already present on %s (skipped)", ws.title)
+
+
+def retheme_existing_tabs() -> int:
+    """Retheme every existing monthly tab. Returns the count successfully rethemed."""
+    ss = get_spreadsheet()
+    count = 0
+    for ym in list_monthly_sheets():
+        try:
+            retheme_monthly_tab(ss.worksheet(ym))
+            count += 1
+        except Exception:
+            logger.exception("Retheme failed for %s", ym)
+    return count
+
+
 def _setup_headers_and_formulas(ws, year_month: str) -> None:
     prev = _previous_month(year_month)
     ws.update("A1:E1", [HEADERS], value_input_option="USER_ENTERED")

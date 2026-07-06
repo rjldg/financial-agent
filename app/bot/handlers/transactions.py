@@ -23,6 +23,13 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return
     text = update.message.text
     logger.info("Received message from %s: %s", update.effective_user.id, text)
+
+    from app.config import USE_INTENT_ROUTER
+    if not USE_INTENT_ROUTER:
+        # Original single-call behavior: parse straight into one transaction.
+        await _handle_log_direct(update, text)
+        return
+
     try:
         result = await route_message(text)
     except RateLimitError:
@@ -45,6 +52,26 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         "❌ Sorry, I couldn't understand that. Try 'spent 200 on groceries' "
         "or ask 'how much did I spend on food this month?'"
     )
+
+
+async def _handle_log_direct(update: Update, text: str) -> None:
+    """Router-free path: parse one transaction with the original single call."""
+    from app.llm_parser import parse_transaction
+    try:
+        txn = await parse_transaction(text)
+    except RateLimitError:
+        await update.message.reply_text(
+            "⏳ The AI service is rate-limited right now. Please wait a minute and try again."
+        )
+        return
+    except Exception:
+        logger.exception("LLM parsing failed for message: %s", text)
+        await update.message.reply_text(
+            "❌ Sorry, I couldn't understand that message. "
+            "Try rephrasing it (e.g. 'Spent 200 on groceries')."
+        )
+        return
+    await _handle_log(update, [txn])
 
 
 async def _handle_query(update: Update, query) -> None:

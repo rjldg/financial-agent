@@ -27,6 +27,7 @@ COMMANDS: list[tuple[str, str]] = [
     ("budgets", "Show budgets vs spend"),
     ("undo", "Remove your last entry"),
     ("rebuild", "Rebuild the dashboard"),
+    ("retheme", "Restyle existing monthly tabs"),
 ]
 
 
@@ -117,3 +118,17 @@ async def rebuild_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await update.message.reply_text("❌ Rebuild failed. Check the logs.")
         return
     await update.message.reply_text("✅ Dashboard rebuilt.")
+
+
+async def retheme_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not is_authorised(update):
+        return
+    await update.message.reply_text("🎨 Restyling existing monthly tabs …")
+    try:
+        from app.sheets.transactions import retheme_existing_tabs
+        n = retheme_existing_tabs()
+    except Exception:
+        logger.exception("Retheme failed")
+        await update.message.reply_text("❌ Retheme failed. Check the logs.")
+        return
+    await update.message.reply_text(f"✅ Restyled {n} monthly tab(s).")

@@ -131,6 +131,13 @@ async def _run_subscription_check(context: ContextTypes.DEFAULT_TYPE) -> None:
 def register_jobs(application: Application) -> None:
     """Wire subscription jobs onto the application's JobQueue."""
     jq = application.job_queue
+    if jq is None:
+        logger.warning(
+            "JobQueue is unavailable — automatic subscription catch-up and the weekly "
+            "digest will NOT run. Install the extra: "
+            'pip install "python-telegram-bot[job-queue]" (or pip install -r requirements.txt).'
+        )
+        return
     jq.run_once(_run_subscription_check, when=5)  # startup catch-up
     jq.run_daily(_run_subscription_check, time=dt.time(hour=SUB_CHECK_HOUR, tzinfo=TZ))
     jq.run_daily(_run_weekly_digest, time=dt.time(hour=WEEKLY_DIGEST_HOUR, tzinfo=TZ))

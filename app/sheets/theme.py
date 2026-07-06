@@ -140,17 +140,24 @@ def category_tag_rules(sid, r0, r1, *, category_col) -> list[dict]:
     return rules
 
 
-def monthly_theme_requests(sid: int) -> list[dict]:
+def monthly_theme_requests(sid: int, *, include_banding: bool = True) -> list[dict]:
     """All Bold Finance formatting requests for a monthly tab.
 
     Layout assumptions match transactions._setup_headers_and_formulas:
       data table A1:E (col 0..4), rows: header row 0, data rows 1..499.
+
+    Set ``include_banding=False`` when re-theming an existing tab: re-adding a
+    banded range that overlaps an existing one raises, so callers apply banding
+    separately (best-effort).
     """
     reqs: list[dict] = [
         # Dark header on data table A1:E1 (white bold)
         solid_fill(sid, 0, 1, 0, 5, COLORS["header"], text=COLORS["white"], bold=True),
+    ]
+    if include_banding:
         # Banded data rows A2:E500
-        banding(sid, 1, 500, 0, 5, COLORS["header"], COLORS["band"]),
+        reqs.append(banding(sid, 1, 500, 0, 5, COLORS["header"], COLORS["band"]))
+    reqs += [
         # Summary value fills (keep positions; H2 income, H3 expense, H4 net, H7 running)
         solid_fill(sid, 1, 2, 7, 8, COLORS["card_income"], text=COLORS["white"], bold=True),
         solid_fill(sid, 2, 3, 7, 8, COLORS["card_expense"], text=COLORS["white"], bold=True),

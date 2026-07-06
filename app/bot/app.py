@@ -30,8 +30,9 @@ def build_application():
     app.add_handler(CommandHandler("help", help_handler))
     app.add_handler(CommandHandler("summary", summary_handler))
     app.add_handler(CommandHandler("months", months_handler))
-    from app.bot.handlers.reports import rebuild_handler
+    from app.bot.handlers.reports import rebuild_handler, retheme_handler
     app.add_handler(CommandHandler("rebuild", rebuild_handler))
+    app.add_handler(CommandHandler("retheme", retheme_handler))
     from app.bot.handlers.subscriptions import (
         addsub_handler, subs_handler, rmsub_handler, togglesub_handler,
     )
@@ -48,7 +49,9 @@ def build_application():
     app.add_handler(CommandHandler("search", search_handler))
     app.add_handler(CommandHandler("insights", insights_handler))
     app.add_handler(CommandHandler("ask", ask_handler))
-    app.add_handler(MessageHandler(filters.PHOTO, photo_handler))
+    from app.config import ENABLE_RECEIPT_OCR
+    if ENABLE_RECEIPT_OCR:
+        app.add_handler(MessageHandler(filters.PHOTO, photo_handler))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
     return app
 

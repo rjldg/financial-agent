@@ -1,9 +1,12 @@
 """Application configuration loaded from environment variables."""
 
+import logging
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 # --- Telegram ---
 TELEGRAM_TOKEN: str = os.environ["TELEGRAM_TOKEN"]
@@ -19,11 +22,19 @@ GOOGLE_SHEETS_CREDENTIALS_FILE: str = os.environ.get(
 )
 SHEET_ID: str = os.environ["SHEET_ID"]
 # --- Localization ---
-from datetime import datetime
+from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
 APP_TIMEZONE: str = os.environ.get("APP_TIMEZONE", "Asia/Manila")
-TZ = ZoneInfo(APP_TIMEZONE)
+try:
+    TZ = ZoneInfo(APP_TIMEZONE)
+except Exception:  # e.g. ZoneInfoNotFoundError when 'tzdata' is missing on Windows
+    logger.warning(
+        "Timezone %r is unavailable (is the 'tzdata' package installed? "
+        "run: pip install -r requirements.txt). Falling back to UTC.",
+        APP_TIMEZONE,
+    )
+    TZ = timezone.utc
 
 
 def now_local() -> datetime:
@@ -43,6 +54,22 @@ SUB_CHECK_HOUR: int = int(os.environ.get("SUB_CHECK_HOUR", "8"))
 BUDGET_ALERT_THRESHOLD: float = float(os.environ.get("BUDGET_ALERT_THRESHOLD", "0.8"))
 
 
+# --- Feature toggles ---
+def _flag(name: str, default: bool) -> bool:
+    """Parse a boolean env var. Falsy values: 0/false/no/off (case-insensitive)."""
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() not in ("0", "false", "no", "off", "")
+
+
+# When False, plain text is parsed straight into a single transaction via the
+# original one-call path (no intent router, no multi-item, no NL queries).
+USE_INTENT_ROUTER: bool = _flag("USE_INTENT_ROUTER", True)
+# When False, the receipt-photo handler is not registered at all.
+ENABLE_RECEIPT_OCR: bool = _flag("ENABLE_RECEIPT_OCR", True)
+
+
 def validate_config() -> list[str]:
     """Return human-readable configuration problems (empty list means OK)."""
     problems: list[str] = []
@@ -55,5 +82,8 @@ def validate_config() -> list[str]:
     try:
         ZoneInfo(APP_TIMEZONE)
     except Exception:
-        problems.append(f"Invalid APP_TIMEZONE: {APP_TIMEZONE}")
+        problems.append(
+            f"Timezone {APP_TIMEZONE!r} unavailable — install 'tzdata' "
+            "(pip install -r requirements.txt); using UTC as a fallback."
+        )
     return problems

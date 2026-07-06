@@ -198,6 +198,7 @@ The `docker-compose.yml` mounts `service_account.json` read-only and loads `.env
 | `/budgets` | Show budgets vs. spend |
 | `/undo` | Remove your last entry |
 | `/rebuild` | Rebuild the 📊 Dashboard tab |
+| `/retheme` | Restyle existing monthly tabs with the Bold Finance theme |
 | _(any text)_ | Log one or more transactions, or ask a question |
 | _(photo)_ | Log a transaction from a receipt image |
 
@@ -208,6 +209,8 @@ Subscriptions live in a dedicated `Subscriptions` tab and can be managed from Te
 ## 📊 Dashboard
 
 The `📊 Dashboard` tab summarizes your finances across monthly tabs. Use `/rebuild` to refresh KPI cards, trend chart, top categories, upcoming subscriptions, and budget status after manual sheet edits or when you want a clean dashboard rebuild.
+
+The Bold Finance theme (dark headers, banded rows, color-coded category tags, currency formatting) is applied automatically to **newly created** monthly tabs. To restyle **existing** monthly tabs that predate the theme, run `/retheme` — it applies the styling in place without touching your data.
 
 ## 🎯 Budgets
 
@@ -252,6 +255,8 @@ Budgets live in a dedicated `Budgets` tab and are configured with `/setbudget <c
 | `WEEKLY_DIGEST_HOUR` | No | `8` | Local hour for the weekly digest |
 | `SUB_CHECK_HOUR` | No | `8` | Local hour for recurring subscription checks |
 | `BUDGET_ALERT_THRESHOLD` | No | `0.8` | Fraction of budget spend that triggers alerts |
+| `USE_INTENT_ROUTER` | No | `true` | When `false`, bypass the intent router and use the original single-call parser (one transaction per message; no multi-item or NL queries) |
+| `ENABLE_RECEIPT_OCR` | No | `true` | When `false`, disable the receipt-photo (OCR) handler |
 
 ---
 
