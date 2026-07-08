@@ -72,7 +72,6 @@ def banding(sid, r0, r1, c0, c1, header_hex, band_hex) -> dict:
             "bandedRange": {
                 "range": grid_range(sid, r0, r1, c0, c1),
                 "rowProperties": {
-                    "headerColor": rgb(header_hex),
                     "firstBandColor": rgb("#ffffff"),
                     "secondBandColor": rgb(band_hex),
                 },

@@ -162,6 +162,23 @@ def rebuild_dashboard(year: int | None = None) -> None:
     sid = dash.id
     dash.clear()
 
+    # --- Remove any pre-existing charts so rebuilds don't stack duplicates ---
+    try:
+        meta = ss.fetch_sheet_metadata(
+            params={"fields": "sheets(properties(sheetId),charts)"}
+        )
+        del_reqs: list[dict] = []
+        for sh in meta.get("sheets", []):
+            if sh.get("properties", {}).get("sheetId") == sid:
+                for chart in sh.get("charts", []):
+                    del_reqs.append({"deleteEmbeddedObject": {
+                        "objectId": chart["chartId"]}})
+        if del_reqs:
+            batch_update(del_reqs)
+            logger.info("Deleted %d existing dashboard chart(s)", len(del_reqs))
+    except Exception:
+        logger.exception("Chart cleanup failed (non-fatal, continuing rebuild)")
+
     # --- Values ---
     updated = datetime.now(tz=TZ).strftime("%Y-%m-%d %H:%M")
     grid: list[list] = [["💰 Finance Overview", "", "", ""]]

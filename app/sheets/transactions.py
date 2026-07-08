@@ -85,11 +85,26 @@ def retheme_monthly_tab(ws) -> None:
                         "fields": "userEnteredFormat.numberFormat"}},
     ]
     batch_update(reqs)
+    # Remove existing banded ranges then re-add with corrected styling
+    try:
+        meta = get_spreadsheet().fetch_sheet_metadata(
+            params={"fields": "sheets(properties(sheetId),bandedRanges)"}
+        )
+        del_reqs: list[dict] = []
+        for sh in meta.get("sheets", []):
+            if sh.get("properties", {}).get("sheetId") == sid:
+                for br in sh.get("bandedRanges", []):
+                    del_reqs.append({"deleteBanding": {
+                        "bandedRangeId": br["bandedRangeId"]}})
+        if del_reqs:
+            batch_update(del_reqs)
+    except Exception:
+        logger.info("Could not clear existing banding on %s (will try to add anyway)", ws.title)
     try:
         batch_update([theme.banding(sid, 1, 500, 0, 5,
                                     theme.COLORS["header"], theme.COLORS["band"])])
     except Exception:
-        logger.info("Banding already present on %s (skipped)", ws.title)
+        logger.info("Banding add failed on %s (skipped)", ws.title)
 
 
 def retheme_existing_tabs() -> int:
