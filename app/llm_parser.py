@@ -2,60 +2,19 @@
 
 from __future__ import annotations
 
+import base64
 import asyncio
 import json
 import logging
-from typing import Literal
-
 import httpx
-from pydantic import BaseModel, Field
-
 from app.config import OLLAMA_BASE_URL, OLLAMA_MODEL
+from app.models import RouterResult, Transaction
 
 logger = logging.getLogger(__name__)
 
 
 class RateLimitError(Exception):
     """Raised when the LLM API is unavailable after retries."""
-
-
-# The exact set of allowed categories — must match _FORMULA_CATEGORIES in sheets_db.py
-Category = Literal[
-    "Food",
-    "Transport",
-    "Bills",
-    "Salary",
-    "Entertainment",
-    "Shopping",
-    "Health",
-    "Utilities",
-    "Rent",
-    "Freelance",
-    "Dating",
-    "Other",
-]
-
-
-class Transaction(BaseModel):
-    """Structured financial transaction extracted from natural language."""
-
-    amount: float = Field(..., description="The monetary amount (always positive).")
-    category: Category = Field(
-        ...,
-        description=(
-            "MUST be exactly one of: Food, Transport, Bills, Salary, "
-            "Entertainment, Shopping, Health, Utilities, Rent, Freelance, "
-            "Dating, Other. Do NOT invent new categories."
-        ),
-    )
-    description: str = Field(
-        ...,
-        description="A short human-readable summary, e.g. 'McDo lunch'.",
-    )
-    type: Literal["Income", "Expense"] = Field(
-        ...,
-        description="'Income' if the user received money, 'Expense' if they spent it.",
-    )
 
 
 _SYSTEM_PROMPT = (
@@ -134,3 +93,103 @@ async def parse_transaction(text: str) -> Transaction:
     raise RateLimitError(
         f"Could not reach Ollama at {OLLAMA_BASE_URL} after {_MAX_RETRIES} retries."
     ) from last_exc
+
+
+def _strip_fences(content: str) -> str:
+    content = content.strip()
+    if content.startswith("```"):
+        content = content.split("\n", 1)[1] if "\n" in content else content[3:]
+    if content.endswith("```"):
+        content = content[:-3]
+    return content.strip()
+
+
+async def _chat(messages: list[dict], *, temperature: float = 0.1) -> str:
+    """POST to Ollama's chat endpoint with retry/backoff; return message content."""
+    last_exc: Exception | None = None
+    for attempt in range(_MAX_RETRIES):
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    f"{OLLAMA_BASE_URL}/v1/chat/completions",
+                    json={"model": OLLAMA_MODEL, "messages": messages,
+                          "temperature": temperature, "stream": False},
+                )
+                response.raise_for_status()
+            return response.json()["choices"][0]["message"]["content"]
+        except (httpx.ConnectError, httpx.TimeoutException) as exc:
+            delay = _BASE_DELAY * (2 ** attempt)
+            logger.warning("Ollama connection failed. Retry %d/%d in %ds: %s",
+                           attempt + 1, _MAX_RETRIES, delay, exc)
+            last_exc = exc
+            await asyncio.sleep(delay)
+    raise RateLimitError(
+        f"Could not reach Ollama at {OLLAMA_BASE_URL} after {_MAX_RETRIES} retries."
+    ) from last_exc
+
+
+_ROUTER_PROMPT = (
+    "You are a finance assistant router. Classify the user's message and respond "
+    "with ONLY a JSON object, no other text.\n\n"
+    "Allowed categories: Food, Transport, Bills, Salary, Entertainment, Shopping, "
+    "Health, Utilities, Rent, Freelance, Dating, Other. Map synonyms (Groceries->Food, "
+    "Commute->Transport, etc). Never invent categories.\n\n"
+    "If the user is recording one or more spends/incomes, use intent 'log' and fill "
+    "'transactions' (support MULTIPLE items in one message):\n"
+    '{"intent":"log","transactions":[{"amount":<number>,"category":"<allowed>",'
+    '"description":"<short>","type":"Income|Expense"}]}\n\n'
+    "If the user is ASKING a question about their finances, use intent 'query':\n"
+    '{"intent":"query","query":{"metric":"spend|income|net|count",'
+    '"category":<allowed-or-null>,"period":<"YYYY-MM"-or-null>}}\n\n'
+    "If neither applies: {\"intent\":\"unknown\"}"
+)
+
+
+def parse_router_response(content: str) -> RouterResult:
+    """Parse a router LLM response (possibly fenced) into a RouterResult."""
+    return RouterResult.model_validate_json(_strip_fences(content))
+
+
+async def route_message(text: str) -> RouterResult:
+    """Classify + extract a message via the local LLM. Never raises on bad JSON."""
+    content = await _chat(
+        [{"role": "system", "content": _ROUTER_PROMPT}, {"role": "user", "content": text}]
+    )
+    try:
+        return parse_router_response(content)
+    except Exception:
+        logger.error("Router parse failed for content: %s", content)
+        return RouterResult(intent="unknown")
+
+
+_RECEIPT_PROMPT = (
+    "You read receipts. Extract the grand total amount, a short merchant/description, "
+    "the best-matching category from: Food, Transport, Bills, Salary, Entertainment, "
+    "Shopping, Health, Utilities, Rent, Freelance, Dating, Other, and type 'Expense'. "
+    'Respond with ONLY JSON: {"amount":<number>,"category":"<allowed>",'
+    '"description":"<string>","type":"Expense"}'
+)
+
+
+def build_image_data_uri(image_bytes: bytes, mime: str = "image/jpeg") -> str:
+    """Encode image bytes as an OpenAI-compatible data URI."""
+    b64 = base64.b64encode(image_bytes).decode("ascii")
+    return f"data:{mime};base64,{b64}"
+
+
+def parse_receipt_response(content: str) -> Transaction:
+    """Parse a receipt LLM response (possibly fenced) into a Transaction."""
+    return Transaction.model_validate_json(_strip_fences(content))
+
+
+async def parse_receipt(image_bytes: bytes, mime: str = "image/jpeg") -> Transaction:
+    """Extract a Transaction from a receipt image using the local vision model."""
+    uri = build_image_data_uri(image_bytes, mime)
+    content = await _chat([
+        {"role": "system", "content": _RECEIPT_PROMPT},
+        {"role": "user", "content": [
+            {"type": "text", "text": "Extract the transaction from this receipt."},
+            {"type": "image_url", "image_url": {"url": uri}},
+        ]},
+    ])
+    return parse_receipt_response(content)

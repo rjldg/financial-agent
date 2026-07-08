@@ -8,16 +8,19 @@ Send a message like _"Spent 150 on lunch at McDo"_ and the bot will extract the 
 
 ## ✨ Features
 
-- **Natural Language Input** — No forms, no menus. Just text the bot like you'd text a friend.
+- **Natural Language Input** — Text the bot naturally to log one or more transactions in a single message.
 - **Local AI-Powered Extraction** — A locally hosted Ollama model extracts `amount`, `category`, `description`, and `type` (Income/Expense) with guaranteed structured output via Pydantic.
 - **100% Private & Free** — The LLM runs on your own hardware. No API keys, no cloud AI costs, no data sent to third parties.
+- **Recurring Subscriptions** — Track monthly/yearly subscriptions, pause or resume them, and auto-log due charges.
+- **📊 Dashboard Tab** — Rebuild a Sheet dashboard with KPI cards, trend chart, top categories, upcoming subscriptions, and budget status.
+- **Budgets & Alerts** — Set monthly category budgets and receive warnings as spending approaches the configured threshold.
+- **Natural-Language Queries** — Ask finance questions with `/ask`, get spending insights with `/insights`, and find transactions with `/search`.
+- **Inline Quick-Fix Buttons** — Correct transaction category, type, or amount from Telegram without editing the sheet manually.
+- **Receipt OCR** — Send a receipt photo and log the extracted transaction.
+- **Weekly Digest** — Receive scheduled weekly summaries of spend and upcoming subscription charges.
+- **Currency & Timezone Support** — Configure display currency and local scheduling via environment variables.
 - **Auto-Monthly Sheets** — A new tab (e.g. `2026-03`) is created automatically each month.
-- **Live Formulas** — Total Income, Total Expenses, Net Savings, per-category breakdown — all computed via Google Sheets formulas.
-- **Running Balance** — Each month carries forward the previous month's running total, giving you cumulative savings at a glance.
-- **Embedded Charts** — Pie chart (by category) and column chart (income vs expenses) are auto-created on each monthly tab.
-- **Dropdowns** — Category (13 options) and Type (Income/Expense) columns have data-validation dropdowns for manual edits in the sheet.
-- **Number Formatting** — All monetary values formatted as `#,##0.00`.
-- **Connection Resilience** — Retries Ollama API calls up to 3× with exponential backoff on connection/timeout errors.
+- **Live Formulas, Charts, and Running Balance** — Monthly tabs include totals, category breakdowns, charts, and a carried-forward running total.
 - **Security** — Only responds to a single authorized Telegram user ID; all others are silently ignored.
 
 ---
@@ -176,15 +179,63 @@ The `docker-compose.yml` mounts `service_account.json` read-only and loads `.env
 
 ---
 
+## ⬆️ Upgrading an Existing Deployment
+
+If you're updating a bot that's already running against a live Google Sheet (e.g. as an `nssm` Windows service), follow these steps:
+
+1. **Pull the new code** into your existing checkout.
+2. **Reinstall dependencies** in the *exact* environment your service runs from:
+   ```bash
+   pip install -r requirements.txt
+   ```
+   This is required — the timezone support needs the **`tzdata`** package (Windows has no built-in tz database), and scheduled jobs need the **`job-queue`** extra. If `tzdata` is missing the bot now falls back to UTC with a warning instead of crashing, but you should still install it. If the `job-queue` extra is missing, recurring subscriptions and the weekly digest are skipped (the bot logs a warning and keeps running).
+3. **Review new environment variables** (all optional, sensible defaults) in the **Environment Variables Reference** section below — e.g. `APP_TIMEZONE`, `CURRENCY_SYMBOL`, `USE_INTENT_ROUTER`, `ENABLE_RECEIPT_OCR`. Add any you want to override to your `.env`.
+4. **Restart the bot / service.** On first start it creates the `📊 Dashboard`, `⚙ Subscriptions`, `🎯 Budgets`, and a hidden `_MonthlyIndex` tab if missing, and pins the Dashboard to the front — this changes your tab order but never touches transaction data.
+5. **Restyle older monthly tabs** (optional): run **`/retheme`** in Telegram to apply the new Bold Finance theme to month tabs created before this version. New tabs are themed automatically. `/retheme` only changes formatting and is safe to re-run.
+6. **Refresh the dashboard** (optional): run **`/rebuild`** to populate the `📊 Dashboard` from your existing history.
+
+> **Tip:** Your existing transaction data is never rewritten or deleted by the upgrade. To be extra safe, you can first point `SHEET_ID` at a **copy** of your sheet, verify the bot starts and behaves as expected, then switch back to the real sheet.
+
+> **Behavior changes to expect:** dates are now recorded in `APP_TIMEZONE` (default `Asia/Manila`) instead of UTC, and each text message makes an extra "router" LLM call to classify log-vs-question and support multi-item logging. Set `USE_INTENT_ROUTER=false` to keep the original single-call logging behavior.
+
+---
+
 ## 🤖 Bot Commands
 
 | Command | Description |
 |---|---|
-| `/start` | Welcome message with usage instructions |
-| `/summary` | Financial report for the **current month** |
-| `/summary 2026-03` | Financial report for a **specific month** |
-| `/months` | List all months that have recorded transactions |
-| _(any text)_ | Parse and log a transaction |
+| `/start` | Welcome + quick guide |
+| `/help` | List every command |
+| `/summary [YYYY-MM]` | Monthly report |
+| `/months` | List tracked months |
+| `/insights` | Top spend + month-over-month |
+| `/ask <question>` | Natural-language finance question |
+| `/search <term>` | Find transactions by keyword |
+| `/addsub <name> <amount> <category> <monthly\|yearly> day=<d> [month=<m>]` | Add a subscription |
+| `/subs` | List subscriptions |
+| `/rmsub <name>` | Remove a subscription |
+| `/togglesub <name>` | Pause/resume a subscription |
+| `/setbudget <category> <amount>` | Set a monthly category budget |
+| `/budgets` | Show budgets vs. spend |
+| `/undo` | Remove your last entry |
+| `/rebuild` | Rebuild the 📊 Dashboard tab |
+| `/retheme` | Restyle existing monthly tabs with the Bold Finance theme |
+| _(any text)_ | Log one or more transactions, or ask a question |
+| _(photo)_ | Log a transaction from a receipt image |
+
+## 🔁 Subscriptions
+
+Subscriptions live in a dedicated `Subscriptions` tab and can be managed from Telegram with `/addsub`, `/subs`, `/rmsub`, and `/togglesub`. The scheduler checks due monthly or yearly charges in the configured timezone and auto-logs each subscription only once per billing period.
+
+## 📊 Dashboard
+
+The `📊 Dashboard` tab summarizes your finances across monthly tabs. Use `/rebuild` to refresh KPI cards, trend chart, top categories, upcoming subscriptions, and budget status after manual sheet edits or when you want a clean dashboard rebuild.
+
+The Bold Finance theme (dark headers, banded rows, color-coded category tags, currency formatting) is applied automatically to **newly created** monthly tabs. To restyle **existing** monthly tabs that predate the theme, run `/retheme` — it applies the styling in place without touching your data.
+
+## 🎯 Budgets
+
+Budgets live in a dedicated `Budgets` tab and are configured with `/setbudget <category> <amount>`. When a new expense pushes a category past `BUDGET_ALERT_THRESHOLD`, the bot includes an alert so you can adjust spending before the month ends.
 
 ### Example `/summary` Output
 
@@ -218,6 +269,15 @@ The `docker-compose.yml` mounts `service_account.json` read-only and loads `.env
 | `GOOGLE_SHEETS_CREDENTIALS_FILE` | No | `service_account.json` | Path to the service-account JSON |
 | `OLLAMA_BASE_URL` | No | `http://127.0.0.1:11434` | Base URL of the local Ollama server (use `127.0.0.1` to bypass IPv6 DNS resolution issues on Windows) |
 | `OLLAMA_MODEL` | No | `gemma3:4b` | Ollama model to use for extraction |
+| `APP_TIMEZONE` | No | `Asia/Manila` | IANA timezone for local dates and scheduled jobs |
+| `CURRENCY_CODE` | No | `PHP` | ISO-like currency code used for labels |
+| `CURRENCY_SYMBOL` | No | `₱` | Currency symbol shown in bot replies and sheets |
+| `WEEKLY_DIGEST_DAY` | No | `mon` | Day of week for the weekly digest (`mon`..`sun`) |
+| `WEEKLY_DIGEST_HOUR` | No | `8` | Local hour for the weekly digest |
+| `SUB_CHECK_HOUR` | No | `8` | Local hour for recurring subscription checks |
+| `BUDGET_ALERT_THRESHOLD` | No | `0.8` | Fraction of budget spend that triggers alerts |
+| `USE_INTENT_ROUTER` | No | `true` | When `false`, bypass the intent router and use the original single-call parser (one transaction per message; no multi-item or NL queries) |
+| `ENABLE_RECEIPT_OCR` | No | `true` | When `false`, disable the receipt-photo (OCR) handler |
 
 ---
 
