@@ -243,6 +243,39 @@ def rebuild_dashboard(year: int | None = None) -> None:
             "anchorCell": {"sheetId": sid, "rowIndex": 14, "columnIndex": 0},
             "widthPixels": 620, "heightPixels": 300}}}}})
 
+    # --- Column widths so values don't get cut off ---
+    col_widths = [
+        # A-D: YTD cards & top spending
+        (0, 1, 180),   # A – labels ("YTD Income", category names)
+        (1, 2, 160),   # B – labels / values
+        (2, 3, 160),   # C – values
+        (3, 4, 160),   # D – values
+        # E: spacer
+        (4, 5, 30),
+        # F-G: Subscriptions
+        (5, 6, 220),   # F – subscription name + date
+        (6, 7, 140),   # G – amount
+        # H: spacer
+        (7, 8, 30),
+        # I-K: Budgets
+        (8, 9, 160),   # I – category
+        (9, 10, 140),  # J – spent
+        (10, 11, 140), # K – limit
+    ]
+    for c0, c1, px in col_widths:
+        reqs.append({
+            "updateDimensionProperties": {
+                "range": {
+                    "sheetId": sid,
+                    "dimension": "COLUMNS",
+                    "startIndex": c0,
+                    "endIndex": c1,
+                },
+                "properties": {"pixelSize": px},
+                "fields": "pixelSize",
+            }
+        })
+
     batch_update(reqs)
 
     # --- Upcoming subscriptions (next 30 days), placed in columns F:G ---
