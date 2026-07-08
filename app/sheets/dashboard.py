@@ -64,11 +64,22 @@ def _get_or_create_hidden_index():
     return ws
 
 
-def rebuild_index() -> list[tuple[str, float, float, float, float]]:
-    """Recompute the entire _MonthlyIndex from every monthly tab. Authoritative."""
+def rebuild_index() -> tuple[
+    list[tuple[str, float, float, float, float]],
+    dict[str, "MonthlySummary"],
+]:
+    """Recompute the entire _MonthlyIndex from every monthly tab.
+
+    Returns (index_rows, summaries_by_month) so callers can reuse the
+    summaries without a second round-trip to the Sheets API.
+    """
+    from app.models import MonthlySummary  # noqa: F811 (used in type hint above)
+
+    summaries: dict[str, MonthlySummary] = {}
     totals: list[tuple[str, float, float]] = []
     for ym in list_monthly_sheets():
         s = get_monthly_summary(ym)
+        summaries[ym] = s
         totals.append((ym, s.total_income, s.total_expenses))
     rows = compute_index_rows(totals)
     ws = _get_or_create_hidden_index()
@@ -76,7 +87,7 @@ def rebuild_index() -> list[tuple[str, float, float, float, float]]:
     if rows:
         ws.update(f"A2:E{len(rows) + 1}", [list(r) for r in rows],
                   value_input_option="USER_ENTERED")
-    return rows
+    return rows, summaries
 
 
 def update_month(year_month: str) -> None:
@@ -128,16 +139,17 @@ def ensure_core_tabs() -> None:
     }])
 
 
-def _ytd_category_totals(year: int) -> dict[str, float]:
-    """Sum expense-side category spend across the year's monthly tabs."""
+def _ytd_category_totals_from_cache(
+    summaries: dict[str, "MonthlySummary"], year: int
+) -> dict[str, float]:
+    """Sum expense-side category spend using pre-fetched summaries."""
     from collections import defaultdict
     acc: dict[str, float] = defaultdict(float)
-    for ym in list_monthly_sheets():
+    for ym, s in summaries.items():
         if not ym.startswith(f"{year}-"):
             continue
-        s = get_monthly_summary(ym)
         for cat, total in s.category_totals.items():
-            if cat != "Salary":  # exclude the main income category from "spending"
+            if cat != "Salary":
                 acc[cat] += total
     return dict(acc)
 
@@ -152,9 +164,9 @@ def rebuild_dashboard(year: int | None = None) -> None:
     if year is None:
         year = datetime.now(tz=TZ).year
 
-    rows = rebuild_index()
+    rows, summaries = rebuild_index()
     ytd = ytd_totals(rows, year)
-    cats = top_categories(_ytd_category_totals(year), limit=5)
+    cats = top_categories(_ytd_category_totals_from_cache(summaries, year), limit=5)
 
     ss = get_spreadsheet()
     ensure_core_tabs()

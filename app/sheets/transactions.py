@@ -198,7 +198,8 @@ def append_transaction(date: str, description: str, category: str,
 def get_monthly_summary(year_month: str) -> MonthlySummary:
     ss = get_spreadsheet()
     ws = ss.worksheet(year_month)
-    rows = ws.get_all_records(expected_headers=HEADERS)
+    rows = ws.get_all_records(expected_headers=HEADERS,
+                                value_render_option="UNFORMATTED_VALUE")
     summary = MonthlySummary(year_month=year_month)
     category_totals: dict[str, float] = defaultdict(float)
     for row in rows:
@@ -217,13 +218,13 @@ def get_monthly_summary(year_month: str) -> MonthlySummary:
     summary.net_savings = summary.total_income - summary.total_expenses
     summary.category_totals = dict(sorted(category_totals.items(), key=lambda x: -x[1]))
     try:
-        cf_val = ws.acell("H6", value_render_option="FORMATTED_VALUE").value
-        summary.carried_forward = float(cf_val.replace(",", "")) if cf_val else 0.0
+        cf_val = ws.acell("H6", value_render_option="UNFORMATTED_VALUE").value
+        summary.carried_forward = float(cf_val) if cf_val else 0.0
     except (ValueError, TypeError, AttributeError):
         pass
     try:
-        rt_val = ws.acell("H7", value_render_option="FORMATTED_VALUE").value
-        summary.running_total = float(rt_val.replace(",", "")) if rt_val else 0.0
+        rt_val = ws.acell("H7", value_render_option="UNFORMATTED_VALUE").value
+        summary.running_total = float(rt_val) if rt_val else 0.0
     except (ValueError, TypeError, AttributeError):
         pass
     return summary
