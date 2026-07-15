@@ -77,10 +77,12 @@ async def parse_transaction(text: str) -> Transaction:
 
             return Transaction.model_validate_json(content)
 
-        except (httpx.ConnectError, httpx.TimeoutException) as exc:
+        except (httpx.ConnectError, httpx.TimeoutException, httpx.HTTPStatusError) as exc:
+            if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code < 500:
+                raise  # 4xx errors are not retryable
             delay = _BASE_DELAY * (2 ** attempt)
             logger.warning(
-                "Ollama connection failed. Retry %d/%d in %ds: %s",
+                "Ollama request failed (attempt %d/%d, retry in %ds): %s",
                 attempt + 1, _MAX_RETRIES, delay, exc,
             )
             last_exc = exc
@@ -117,9 +119,11 @@ async def _chat(messages: list[dict], *, temperature: float = 0.1) -> str:
                 )
                 response.raise_for_status()
             return response.json()["choices"][0]["message"]["content"]
-        except (httpx.ConnectError, httpx.TimeoutException) as exc:
+        except (httpx.ConnectError, httpx.TimeoutException, httpx.HTTPStatusError) as exc:
+            if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code < 500:
+                raise  # 4xx errors are not retryable
             delay = _BASE_DELAY * (2 ** attempt)
-            logger.warning("Ollama connection failed. Retry %d/%d in %ds: %s",
+            logger.warning("Ollama request failed (attempt %d/%d, retry in %ds): %s",
                            attempt + 1, _MAX_RETRIES, delay, exc)
             last_exc = exc
             await asyncio.sleep(delay)
