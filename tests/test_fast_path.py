@@ -62,6 +62,9 @@ def test_unicode_dash_touching_the_number_is_refused():
     assert try_fast_parse("carwash – 50") is None  # en dash, spaced
     assert try_fast_parse("carwash—50") is None  # em dash, glued
     assert try_fast_parse("carwash — 50") is None  # em dash, spaced
+    # U+2212 MINUS SIGN is what Google Sheets and most finance apps render a
+    # negative number with, so a pasted refund must be refused just as hard.
+    assert try_fast_parse("grab −145") is None  # minus sign, glued to amount
 
 
 def test_amount_glued_to_a_word_is_refused():

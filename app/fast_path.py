@@ -69,11 +69,13 @@ def try_fast_parse(text: str) -> Transaction | None:
     if not stripped:
         return None
     # Phone keyboards autocorrect a typed hyphen into an en dash or em dash,
-    # so fold those to a plain "-" once, up front. Everything downstream
-    # (the hyphen-near-amount check, then the description cleanup at the
-    # end) already only knows about the ASCII hyphen, and normalising here
-    # keeps it that way instead of teaching every check its own dash list.
-    stripped = stripped.replace("–", "-").replace("—", "-")
+    # and Google Sheets / most finance apps render a negative with the
+    # dedicated minus sign (U+2212) instead - fold all of those to a plain
+    # "-" once, up front. Everything downstream (the hyphen-near-amount
+    # check, then the description cleanup at the end) already only knows
+    # about the ASCII hyphen, and normalising here keeps it that way instead
+    # of teaching every check its own dash list.
+    stripped = stripped.replace("–", "-").replace("—", "-").replace("−", "-")
     if _QUESTION.search(stripped) or _JOINING.search(stripped):
         return None
 
@@ -102,7 +104,7 @@ def try_fast_parse(text: str) -> Transaction | None:
     if amount <= 0:
         return None
 
-    # No need to list en/em dash here too - they were folded to "-" above.
+    # No need to list en/em dash or minus sign here too - they were folded to "-" above.
     description = _NUMBER.sub("", stripped).strip(" -:")
     return Transaction(
         amount=amount,
