@@ -1,0 +1,135 @@
+{"text":"carwash 250","intent":"log","transactions":[{"amount":250,"category":"Transport","type":"Expense"}],"query":null}
+{"text":"load 100","intent":"log","transactions":[{"amount":100,"category":"Bills","type":"Expense"}],"query":null}
+{"text":"meralco 2400","intent":"log","transactions":[{"amount":2400,"category":"Utilities","type":"Expense"}],"query":null}
+{"text":"haircut 150","intent":"log","transactions":[{"amount":150,"category":"Health","type":"Expense"}],"query":null}
+{"text":"jollibee 320 and grab 145","intent":"log","transactions":[{"amount":320,"category":"Food","type":"Expense"},{"amount":145,"category":"Transport","type":"Expense"}],"query":null}
+{"text":"how much did i spend on food this month","intent":"query","transactions":[],"query":{"metric":"spend","category":"Food","period":null}}
+{"text":"what did i earn in 2026-07","intent":"query","transactions":[],"query":{"metric":"income","category":null,"period":"2026-07"}}
+{"text":"hello","intent":"unknown","transactions":[],"query":null}
+{"text":"thanks!","intent":"unknown","transactions":[],"query":null}
+{"text":"spent 1,200 on medicine and 300 for lunch","intent":"log","transactions":[{"amount":1200,"category":"Health","type":"Expense"},{"amount":300,"category":"Food","type":"Expense"}],"query":null}
+{"text":"₱250 grab","intent":"log","transactions":[{"amount":250,"category":"Transport","type":"Expense"}],"query":null}
+{"text":"2500 salary from freelance client","intent":"log","transactions":[{"amount":2500,"category":"Freelance","type":"Income"}],"query":null}
+{"text":"grab 145","intent":"log","transactions":[{"amount":145,"category":"Transport","type":"Expense"}],"query":null}
+{"text":"jollibee 320","intent":"log","transactions":[{"amount":320,"category":"Food","type":"Expense"}],"query":null}
+{"text":"shopee 899","intent":"log","transactions":[{"amount":899,"category":"Shopping","type":"Expense"}],"query":null}
+{"text":"maynilad 1200","intent":"log","transactions":[{"amount":1200,"category":"Utilities","type":"Expense"}],"query":null}
+{"text":"globe 999","intent":"log","transactions":[{"amount":999,"category":"Bills","type":"Expense"}],"query":null}
+{"text":"mercury drug 350","intent":"log","transactions":[{"amount":350,"category":"Health","type":"Expense"}],"query":null}
+{"text":"petron 500","intent":"log","transactions":[{"amount":500,"category":"Transport","type":"Expense"}],"query":null}
+{"text":"puregold 620","intent":"log","transactions":[{"amount":620,"category":"Food","type":"Expense"}],"query":null}
+{"text":"angkas 80","intent":"log","transactions":[{"amount":80,"category":"Transport","type":"Expense"}],"query":null}
+{"text":"lazada 1500","intent":"log","transactions":[{"amount":1500,"category":"Shopping","type":"Expense"}],"query":null}
+{"text":"watsons 245","intent":"log","transactions":[{"amount":245,"category":"Health","type":"Expense"}],"query":null}
+{"text":"gym 1200","intent":"log","transactions":[{"amount":1200,"category":"Health","type":"Expense"}],"query":null}
+{"text":"rent 8000","intent":"log","transactions":[{"amount":8000,"category":"Rent","type":"Expense"}],"query":null}
+{"text":"jeep 15","intent":"log","transactions":[{"amount":15,"category":"Transport","type":"Expense"}],"query":null}
+{"text":"toll 120","intent":"log","transactions":[{"amount":120,"category":"Transport","type":"Expense"}],"query":null}
+{"text":"parking 50","intent":"log","transactions":[{"amount":50,"category":"Transport","type":"Expense"}],"query":null}
+{"text":"mcdo 180","intent":"log","transactions":[{"amount":180,"category":"Food","type":"Expense"}],"query":null}
+{"text":"starbucks 220","intent":"log","transactions":[{"amount":220,"category":"Food","type":"Expense"}],"query":null}
+{"text":"netflix 549","intent":"log","transactions":[{"amount":549,"category":"Bills","type":"Expense"}],"query":null}
+{"text":"spotify 149","intent":"log","transactions":[{"amount":149,"category":"Bills","type":"Expense"}],"query":null}
+{"text":"uniqlo 1990","intent":"log","transactions":[{"amount":1990,"category":"Shopping","type":"Expense"}],"query":null}
+{"text":"dentist 2500","intent":"log","transactions":[{"amount":2500,"category":"Health","type":"Expense"}],"query":null}
+{"text":"barber 120","intent":"log","transactions":[{"amount":120,"category":"Health","type":"Expense"}],"query":null}
+{"text":"salon 800","intent":"log","transactions":[{"amount":800,"category":"Health","type":"Expense"}],"query":null}
+{"text":"tricycle 15","intent":"log","transactions":[{"amount":15,"category":"Transport","type":"Expense"}],"query":null}
+{"text":"manila water 450","intent":"log","transactions":[{"amount":450,"category":"Utilities","type":"Expense"}],"query":null}
+{"text":"spent 200 on groceries","intent":"log","transactions":[{"amount":200,"category":"Food","type":"Expense"}],"query":null}
+{"text":"paid 1500 for rent","intent":"log","transactions":[{"amount":1500,"category":"Rent","type":"Expense"}],"query":null}
+{"text":"spent 350 on a movie","intent":"log","transactions":[{"amount":350,"category":"Entertainment","type":"Expense"}],"query":null}
+{"text":"paid 3000 for the dorm","intent":"log","transactions":[{"amount":3000,"category":"Rent","type":"Expense"}],"query":null}
+{"text":"bought new shoes for 1800","intent":"log","transactions":[{"amount":1800,"category":"Shopping","type":"Expense"}],"query":null}
+{"text":"spent 500 on a concert ticket","intent":"log","transactions":[{"amount":500,"category":"Entertainment","type":"Expense"}],"query":null}
+{"text":"paid 200 for parking","intent":"log","transactions":[{"amount":200,"category":"Transport","type":"Expense"}],"query":null}
+{"text":"spent 150 on a haircut","intent":"log","transactions":[{"amount":150,"category":"Health","type":"Expense"}],"query":null}
+{"text":"bought medicine for 450","intent":"log","transactions":[{"amount":450,"category":"Health","type":"Expense"}],"query":null}
+{"text":"paid 250 for coffee","intent":"log","transactions":[{"amount":250,"category":"Food","type":"Expense"}],"query":null}
+{"text":"bought a birthday gift for my girlfriend 800","intent":"log","transactions":[{"amount":800,"category":"Dating","type":"Expense"}],"query":null}
+{"text":"spent 300 on new clothes","intent":"log","transactions":[{"amount":300,"category":"Shopping","type":"Expense"}],"query":null}
+{"text":"paid 5000 condo association dues","intent":"log","transactions":[{"amount":5000,"category":"Rent","type":"Expense"}],"query":null}
+{"text":"spent 1000 at the gym","intent":"log","transactions":[{"amount":1000,"category":"Health","type":"Expense"}],"query":null}
+{"text":"bought a new phone for 15000","intent":"log","transactions":[{"amount":15000,"category":"Shopping","type":"Expense"}],"query":null}
+{"text":"spent 200 on drinks at the bar","intent":"log","transactions":[{"amount":200,"category":"Entertainment","type":"Expense"}],"query":null}
+{"text":"paid 800 electricity bill","intent":"log","transactions":[{"amount":800,"category":"Utilities","type":"Expense"}],"query":null}
+{"text":"spent 150 on a board game","intent":"log","transactions":[{"amount":150,"category":"Entertainment","type":"Expense"}],"query":null}
+{"text":"paid 300 for a doctor consultation","intent":"log","transactions":[{"amount":300,"category":"Health","type":"Expense"}],"query":null}
+{"text":"took my girlfriend to the movies 600","intent":"log","transactions":[{"amount":600,"category":"Dating","type":"Expense"}],"query":null}
+{"text":"spent 250 on a hobby kit","intent":"log","transactions":[{"amount":250,"category":"Entertainment","type":"Expense"}],"query":null}
+{"text":"paid 1200 water bill","intent":"log","transactions":[{"amount":1200,"category":"Utilities","type":"Expense"}],"query":null}
+{"text":"meralco 2400, globe 999, netflix 549","intent":"log","transactions":[{"amount":2400,"category":"Utilities","type":"Expense"},{"amount":999,"category":"Bills","type":"Expense"},{"amount":549,"category":"Bills","type":"Expense"}],"query":null}
+{"text":"grab 150, jollibee 250","intent":"log","transactions":[{"amount":150,"category":"Transport","type":"Expense"},{"amount":250,"category":"Food","type":"Expense"}],"query":null}
+{"text":"bought groceries 800 and paid load 100","intent":"log","transactions":[{"amount":800,"category":"Food","type":"Expense"},{"amount":100,"category":"Bills","type":"Expense"}],"query":null}
+{"text":"rent 8000 and meralco 1500","intent":"log","transactions":[{"amount":8000,"category":"Rent","type":"Expense"},{"amount":1500,"category":"Utilities","type":"Expense"}],"query":null}
+{"text":"shopee 500, lazada 700, uniqlo 900","intent":"log","transactions":[{"amount":500,"category":"Shopping","type":"Expense"},{"amount":700,"category":"Shopping","type":"Expense"},{"amount":900,"category":"Shopping","type":"Expense"}],"query":null}
+{"text":"gym 1200 and haircut 150","intent":"log","transactions":[{"amount":1200,"category":"Health","type":"Expense"},{"amount":150,"category":"Health","type":"Expense"}],"query":null}
+{"text":"paid 300 for parking and 100 for toll","intent":"log","transactions":[{"amount":300,"category":"Transport","type":"Expense"},{"amount":100,"category":"Transport","type":"Expense"}],"query":null}
+{"text":"jollibee 200, mcdo 150, kfc 180","intent":"log","transactions":[{"amount":200,"category":"Food","type":"Expense"},{"amount":150,"category":"Food","type":"Expense"},{"amount":180,"category":"Food","type":"Expense"}],"query":null}
+{"text":"spent 500 on shopping and 200 on movies","intent":"log","transactions":[{"amount":500,"category":"Shopping","type":"Expense"},{"amount":200,"category":"Entertainment","type":"Expense"}],"query":null}
+{"text":"globe 999 and netflix 549 and spotify 149","intent":"log","transactions":[{"amount":999,"category":"Bills","type":"Expense"},{"amount":549,"category":"Bills","type":"Expense"},{"amount":149,"category":"Bills","type":"Expense"}],"query":null}
+{"text":"watsons 300, mercury drug 450","intent":"log","transactions":[{"amount":300,"category":"Health","type":"Expense"},{"amount":450,"category":"Health","type":"Expense"}],"query":null}
+{"text":"grab 145, angkas 80, jeep 15","intent":"log","transactions":[{"amount":145,"category":"Transport","type":"Expense"},{"amount":80,"category":"Transport","type":"Expense"},{"amount":15,"category":"Transport","type":"Expense"}],"query":null}
+{"text":"paid rent 8000, meralco 2000, maynilad 500","intent":"log","transactions":[{"amount":8000,"category":"Rent","type":"Expense"},{"amount":2000,"category":"Utilities","type":"Expense"},{"amount":500,"category":"Utilities","type":"Expense"}],"query":null}
+{"text":"paid load 100 and internet bill 1500","intent":"log","transactions":[{"amount":100,"category":"Bills","type":"Expense"},{"amount":1500,"category":"Bills","type":"Expense"}],"query":null}
+{"text":"spent 300 on lunch, 150 on merienda, and 500 on dinner","intent":"log","transactions":[{"amount":300,"category":"Food","type":"Expense"},{"amount":150,"category":"Food","type":"Expense"},{"amount":500,"category":"Food","type":"Expense"}],"query":null}
+{"text":"how much have i spent this month","intent":"query","transactions":[],"query":{"metric":"spend","category":null,"period":null}}
+{"text":"how much did i spend on transport in 2026-07","intent":"query","transactions":[],"query":{"metric":"spend","category":"Transport","period":"2026-07"}}
+{"text":"what's my total spend on shopping","intent":"query","transactions":[],"query":{"metric":"spend","category":"Shopping","period":null}}
+{"text":"how much did i spend on bills in 2026-06","intent":"query","transactions":[],"query":{"metric":"spend","category":"Bills","period":"2026-06"}}
+{"text":"how much did i spend today","intent":"query","transactions":[],"query":{"metric":"spend","category":null,"period":null}}
+{"text":"how much income did i have this month","intent":"query","transactions":[],"query":{"metric":"income","category":null,"period":null}}
+{"text":"what's my total income from freelance","intent":"query","transactions":[],"query":{"metric":"income","category":"Freelance","period":null}}
+{"text":"how much did i earn from salary this month","intent":"query","transactions":[],"query":{"metric":"income","category":"Salary","period":null}}
+{"text":"what was my income in 2026-06","intent":"query","transactions":[],"query":{"metric":"income","category":null,"period":"2026-06"}}
+{"text":"how much salary did i receive this year","intent":"query","transactions":[],"query":{"metric":"income","category":"Salary","period":null}}
+{"text":"what's my net savings this month","intent":"query","transactions":[],"query":{"metric":"net","category":null,"period":null}}
+{"text":"how much did i save in 2026-07","intent":"query","transactions":[],"query":{"metric":"net","category":null,"period":"2026-07"}}
+{"text":"what's my net for food this month","intent":"query","transactions":[],"query":{"metric":"net","category":"Food","period":null}}
+{"text":"am i saving money this month","intent":"query","transactions":[],"query":{"metric":"net","category":null,"period":null}}
+{"text":"how much do i have left over this month","intent":"query","transactions":[],"query":{"metric":"net","category":null,"period":null}}
+{"text":"how many transactions did i log this month","intent":"query","transactions":[],"query":{"metric":"count","category":null,"period":null}}
+{"text":"how many times did i spend on food this month","intent":"query","transactions":[],"query":{"metric":"count","category":"Food","period":null}}
+{"text":"how many transport expenses did i have this month","intent":"query","transactions":[],"query":{"metric":"count","category":"Transport","period":null}}
+{"text":"how many purchases did i make in 2026-07","intent":"query","transactions":[],"query":{"metric":"count","category":null,"period":"2026-07"}}
+{"text":"how many shopee orders did i make this month","intent":"query","transactions":[],"query":{"metric":"count","category":"Shopping","period":null}}
+{"text":"received 25000 salary","intent":"log","transactions":[{"amount":25000,"category":"Salary","type":"Income"}],"query":null}
+{"text":"got my salary 30000","intent":"log","transactions":[{"amount":30000,"category":"Salary","type":"Income"}],"query":null}
+{"text":"salary 45000 credited today","intent":"log","transactions":[{"amount":45000,"category":"Salary","type":"Income"}],"query":null}
+{"text":"earned 5000 from a freelance project","intent":"log","transactions":[{"amount":5000,"category":"Freelance","type":"Income"}],"query":null}
+{"text":"client paid me 8000 for the website","intent":"log","transactions":[{"amount":8000,"category":"Freelance","type":"Income"}],"query":null}
+{"text":"payroll deposit 22000","intent":"log","transactions":[{"amount":22000,"category":"Salary","type":"Income"}],"query":null}
+{"text":"freelance gig paid 3500","intent":"log","transactions":[{"amount":3500,"category":"Freelance","type":"Income"}],"query":null}
+{"text":"got 15000 from my job this payday","intent":"log","transactions":[{"amount":15000,"category":"Salary","type":"Income"}],"query":null}
+{"text":"side project income 6000","intent":"log","transactions":[{"amount":6000,"category":"Freelance","type":"Income"}],"query":null}
+{"text":"monthly salary 28000 received","intent":"log","transactions":[{"amount":28000,"category":"Salary","type":"Income"}],"query":null}
+{"text":"good morning","intent":"unknown","transactions":[],"query":null}
+{"text":"how are you","intent":"unknown","transactions":[],"query":null}
+{"text":"lol nice","intent":"unknown","transactions":[],"query":null}
+{"text":"ok noted","intent":"unknown","transactions":[],"query":null}
+{"text":"what's up","intent":"unknown","transactions":[],"query":null}
+{"text":"good night","intent":"unknown","transactions":[],"query":null}
+{"text":"haha yeah","intent":"unknown","transactions":[],"query":null}
+{"text":"see you later","intent":"unknown","transactions":[],"query":null}
+{"text":"thank you so much","intent":"unknown","transactions":[],"query":null}
+{"text":"no worries","intent":"unknown","transactions":[],"query":null}
+{"text":"meralco 1,850","intent":"log","transactions":[{"amount":1850,"category":"Utilities","type":"Expense"}],"query":null}
+{"text":"₱500 jollibee","intent":"log","transactions":[{"amount":500,"category":"Food","type":"Expense"}],"query":null}
+{"text":"spent 1.2k on shopping","intent":"log","transactions":[{"amount":1200,"category":"Shopping","type":"Expense"}],"query":null}
+{"text":"paid ₱2,500 for rent","intent":"log","transactions":[{"amount":2500,"category":"Rent","type":"Expense"}],"query":null}
+{"text":"spent 99.50 on snacks","intent":"log","transactions":[{"amount":99.5,"category":"Food","type":"Expense"}],"query":null}
+{"text":"grab 145.75","intent":"log","transactions":[{"amount":145.75,"category":"Transport","type":"Expense"}],"query":null}
+{"text":"load 20.50","intent":"log","transactions":[{"amount":20.5,"category":"Bills","type":"Expense"}],"query":null}
+{"text":"shopee 3,299.99","intent":"log","transactions":[{"amount":3299.99,"category":"Shopping","type":"Expense"}],"query":null}
+{"text":"spent 2.5k on a phone","intent":"log","transactions":[{"amount":2500,"category":"Shopping","type":"Expense"}],"query":null}
+{"text":"paid ₱15,000 for the dorm","intent":"log","transactions":[{"amount":15000,"category":"Rent","type":"Expense"}],"query":null}
+{"text":"gas for the car 1000","intent":"log","transactions":[{"amount":1000,"category":"Transport","type":"Expense"}],"query":null}
+{"text":"bought gas for cooking 450","intent":"log","transactions":[{"amount":450,"category":"Utilities","type":"Expense"}],"query":null}
+{"text":"lpg refill 900","intent":"log","transactions":[{"amount":900,"category":"Utilities","type":"Expense"}],"query":null}
+{"text":"gcash cash in 500","intent":"log","transactions":[{"amount":500,"category":"Other","type":"Expense"}],"query":null}
+{"text":"cash out 1000 gcash","intent":"log","transactions":[{"amount":1000,"category":"Other","type":"Expense"}],"query":null}
+{"text":"sent 2000 to my mom via gcash","intent":"log","transactions":[{"amount":2000,"category":"Other","type":"Expense"}],"query":null}
+{"text":"car wash before the trip 300","intent":"log","transactions":[{"amount":300,"category":"Transport","type":"Expense"}],"query":null}
+{"text":"monthly haircut and grooming 500","intent":"log","transactions":[{"amount":500,"category":"Health","type":"Expense"}],"query":null}
+{"text":"grab food delivery 350","intent":"log","transactions":[{"amount":350,"category":"Food","type":"Expense"}],"query":null}
+{"text":"salon haircut and blow dry 700","intent":"log","transactions":[{"amount":700,"category":"Health","type":"Expense"}],"query":null}
