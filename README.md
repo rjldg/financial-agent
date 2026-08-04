@@ -189,14 +189,14 @@ If you're updating a bot that's already running against a live Google Sheet (e.g
    pip install -r requirements.txt
    ```
    This is required — the timezone support needs the **`tzdata`** package (Windows has no built-in tz database), and scheduled jobs need the **`job-queue`** extra. If `tzdata` is missing the bot now falls back to UTC with a warning instead of crashing, but you should still install it. If the `job-queue` extra is missing, recurring subscriptions and the weekly digest are skipped (the bot logs a warning and keeps running).
-3. **Review new environment variables** (all optional, sensible defaults) in the **Environment Variables Reference** section below — e.g. `APP_TIMEZONE`, `CURRENCY_SYMBOL`, `USE_INTENT_ROUTER`, `ENABLE_RECEIPT_OCR`. Add any you want to override to your `.env`.
+3. **Review new environment variables** (all optional, sensible defaults) in the **Environment Variables Reference** section below — e.g. `APP_TIMEZONE`, `CURRENCY_SYMBOL`, `OLLAMA_KEEP_ALIVE`, `ENABLE_RECEIPT_OCR`. Add any you want to override to your `.env`.
 4. **Restart the bot / service.** On first start it creates the `📊 Dashboard`, `⚙ Subscriptions`, `🎯 Budgets`, and a hidden `_MonthlyIndex` tab if missing, and pins the Dashboard to the front — this changes your tab order but never touches transaction data.
 5. **Restyle older monthly tabs** (optional): run **`/retheme`** in Telegram to apply the new Bold Finance theme to month tabs created before this version. New tabs are themed automatically. `/retheme` only changes formatting and is safe to re-run.
 6. **Refresh the dashboard** (optional): run **`/rebuild`** to populate the `📊 Dashboard` from your existing history.
 
 > **Tip:** Your existing transaction data is never rewritten or deleted by the upgrade. To be extra safe, you can first point `SHEET_ID` at a **copy** of your sheet, verify the bot starts and behaves as expected, then switch back to the real sheet.
 
-> **Behavior changes to expect:** dates are now recorded in `APP_TIMEZONE` (default `Asia/Manila`) instead of UTC, and each text message makes an extra "router" LLM call to classify log-vs-question and support multi-item logging. Set `USE_INTENT_ROUTER=false` to keep the original single-call logging behavior.
+> **Behavior changes to expect:** dates are now recorded in `APP_TIMEZONE` (default `Asia/Manila`) instead of UTC, and each text message makes an extra "router" LLM call to classify log-vs-question and support multi-item logging.
 
 ---
 
@@ -269,6 +269,9 @@ Budgets live in a dedicated `Budgets` tab and are configured with `/setbudget <c
 | `GOOGLE_SHEETS_CREDENTIALS_FILE` | No | `service_account.json` | Path to the service-account JSON |
 | `OLLAMA_BASE_URL` | No | `http://127.0.0.1:11434` | Base URL of the local Ollama server (use `127.0.0.1` to bypass IPv6 DNS resolution issues on Windows) |
 | `OLLAMA_MODEL` | No | `gemma3:4b` | Ollama model to use for extraction |
+| `OLLAMA_VISION_MODEL` | No | same as `OLLAMA_MODEL` | Ollama model to use for receipt photos. Leave unset if your text model already reads images (e.g. `gemma3:4b`) — then one model serves both and never needs swapping. Only set this if you want a *different* model for receipts. |
+| `OLLAMA_NUM_CTX` | No | `2048` | Context window (tokens) given to Ollama. `2048` comfortably fits the router prompt (~600 tokens) |
+| `OLLAMA_KEEP_ALIVE` | No | `30m` | How long Ollama keeps the model loaded in VRAM after a reply. The default holds ~2.9 GB of VRAM for 30 minutes after each message, trading memory for faster replies to the next message — this is intended |
 | `APP_TIMEZONE` | No | `Asia/Manila` | IANA timezone for local dates and scheduled jobs |
 | `CURRENCY_CODE` | No | `PHP` | ISO-like currency code used for labels |
 | `CURRENCY_SYMBOL` | No | `₱` | Currency symbol shown in bot replies and sheets |
@@ -276,7 +279,6 @@ Budgets live in a dedicated `Budgets` tab and are configured with `/setbudget <c
 | `WEEKLY_DIGEST_HOUR` | No | `8` | Local hour for the weekly digest |
 | `SUB_CHECK_HOUR` | No | `8` | Local hour for recurring subscription checks |
 | `BUDGET_ALERT_THRESHOLD` | No | `0.8` | Fraction of budget spend that triggers alerts |
-| `USE_INTENT_ROUTER` | No | `true` | When `false`, bypass the intent router and use the original single-call parser (one transaction per message; no multi-item or NL queries) |
 | `ENABLE_RECEIPT_OCR` | No | `true` | When `false`, disable the receipt-photo (OCR) handler |
 
 ---
