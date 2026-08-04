@@ -9,11 +9,18 @@ from telegram.ext import ContextTypes
 from app.config import now_local
 from app.formatting import format_money
 from app.insights import compose_insights, compose_query_answer
-from app.llm_parser import route_message
+from app.llm_parser import RateLimitError, RouterParseError, route_message
 from app.sheets.transactions import get_monthly_summary, list_monthly_sheets, search_transactions
 from app.bot.handlers.reports import is_authorised
+from app.bot.handlers.transactions import _UNREADABLE_REPLY
 
 logger = logging.getLogger(__name__)
+
+# Same wording message_handler uses for the same failure - /ask should not
+# feel like a different, less-finished feature just because it's a command.
+_RATE_LIMITED_REPLY = (
+    "⏳ The AI service is rate-limited right now. Please wait a minute and try again."
+)
 
 
 async def search_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -70,7 +77,15 @@ async def ask_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     if not context.args:
         await update.message.reply_text("Usage: /ask <question about your finances>")
         return
-    result = await route_message(" ".join(context.args))
+    try:
+        result = await route_message(" ".join(context.args))
+    except RateLimitError:
+        await update.message.reply_text(_RATE_LIMITED_REPLY)
+        return
+    except RouterParseError:
+        logger.exception("Router returned an unusable answer for /ask: %s", context.args)
+        await update.message.reply_text(_UNREADABLE_REPLY)
+        return
     if result.intent == "query" and result.query:
         period = result.query.period or now_local().strftime("%Y-%m")
         try:
