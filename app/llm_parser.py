@@ -25,6 +25,12 @@ logger = logging.getLogger(__name__)
 _MAX_RETRIES = 3
 _BASE_DELAY = 2
 
+# Test seam only: httpx.AsyncClient's own `transport` param lets a test swap
+# in an httpx.MockTransport to capture/answer requests with no real network
+# call, without restructuring how _chat builds its client. None means "use
+# httpx's normal transport" - i.e. real network, unchanged in production.
+_transport: httpx.BaseTransport | None = None
+
 
 class RateLimitError(Exception):
     """Raised when the LLM API is unavailable after retries."""
@@ -132,7 +138,7 @@ async def _chat(
     last_exc: Exception | None = None
     for attempt in range(_MAX_RETRIES):
         try:
-            async with httpx.AsyncClient(timeout=120.0) as client:
+            async with httpx.AsyncClient(timeout=120.0, transport=_transport) as client:
                 response = await client.post(
                     f"{OLLAMA_BASE_URL}/api/chat", json=payload
                 )
