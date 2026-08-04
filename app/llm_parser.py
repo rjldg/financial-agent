@@ -67,6 +67,15 @@ def render_router_prompt() -> str:
         '{"intent":"log","transactions":[{"amount":320,"category":"Food",'
         '"description":"Jollibee","type":"Expense"},{"amount":145,'
         '"category":"Transport","description":"Grab","type":"Expense"}]}\n\n'
+        # Every earlier worked log example is an Expense, which taught the model
+        # that logging always means Expense - it started mis-typing real income
+        # messages the same way. These two show the Income shape exists too.
+        "user: this month's paycheck 20000\n"
+        '{"intent":"log","transactions":[{"amount":20000,"category":"Salary",'
+        '"description":"Paycheck","type":"Income"}]}\n\n'
+        "user: client transferred 4000 for logo design\n"
+        '{"intent":"log","transactions":[{"amount":4000,"category":"Freelance",'
+        '"description":"Logo design","type":"Income"}]}\n\n'
         "user: how much did i spend on food this month\n"
         '{"intent":"query","transactions":[],"query":{"metric":"spend",'
         '"category":"Food","period":null}}\n\n'
