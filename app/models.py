@@ -7,10 +7,7 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
-CATEGORIES: list[str] = [
-    "Food", "Transport", "Bills", "Salary", "Entertainment", "Shopping",
-    "Health", "Utilities", "Rent", "Freelance", "Dating", "Other",
-]
+from app.categories import CATEGORIES  # noqa: F401  (re-exported for callers)
 
 Category = Literal[
     "Food", "Transport", "Bills", "Salary", "Entertainment", "Shopping",

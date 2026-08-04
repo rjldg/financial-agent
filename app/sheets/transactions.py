@@ -6,6 +6,7 @@ from collections import defaultdict
 
 from gspread.exceptions import APIError, WorksheetNotFound
 
+from app.categories import CATEGORIES
 from app.models import MonthlySummary
 from app.sheets import theme
 from app.sheets.client import (
@@ -16,10 +17,8 @@ logger = logging.getLogger(__name__)
 
 HEADERS = ["Date", "Description", "Category", "Amount", "Type"]
 
-FORMULA_CATEGORIES = [
-    "Food", "Transport", "Bills", "Salary", "Entertainment", "Shopping",
-    "Health", "Utilities", "Rent", "Freelance", "Dating", "Other",
-]
+# The sheet's data-validation dropdown must offer exactly the allowed categories.
+FORMULA_CATEGORIES = CATEGORIES
 
 
 def _previous_month(year_month: str) -> str:
