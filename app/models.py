@@ -38,6 +38,7 @@ class MonthlySummary:
     running_total: float = 0.0
     category_totals: dict[str, float] = field(default_factory=dict)
     transaction_count: int = 0
+    category_counts: dict[str, int] = field(default_factory=dict)
 
 
 @dataclass

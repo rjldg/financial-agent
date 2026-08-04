@@ -16,6 +16,11 @@ def compose_query_answer(summary: MonthlySummary, metric: str,
         return f"You earned {format_money(summary.total_income)} in {period}."
     if metric == "net":
         return f"Your net savings for {period} were {format_money(summary.net_savings)}."
+    if metric == "count" and category:
+        # transaction_count is every row that month; a category question needs its own tally,
+        # not the whole month's row count mislabeled as the category's count.
+        val = summary.category_counts.get(category, 0)
+        return f"You logged {val} {category} transactions in {period}."
     if metric == "count":
         return f"You logged {summary.transaction_count} transactions in {period}."
     return (f"{period}: income {format_money(summary.total_income)}, "

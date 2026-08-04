@@ -201,6 +201,7 @@ def get_monthly_summary(year_month: str) -> MonthlySummary:
                                 value_render_option="UNFORMATTED_VALUE")
     summary = MonthlySummary(year_month=year_month)
     category_totals: dict[str, float] = defaultdict(float)
+    category_counts: dict[str, int] = defaultdict(int)
     for row in rows:
         try:
             amount = float(row["Amount"])
@@ -213,9 +214,11 @@ def get_monthly_summary(year_month: str) -> MonthlySummary:
         elif txn_type == "Expense":
             summary.total_expenses += amount
         category_totals[category] += amount
+        category_counts[category] += 1
         summary.transaction_count += 1
     summary.net_savings = summary.total_income - summary.total_expenses
     summary.category_totals = dict(sorted(category_totals.items(), key=lambda x: -x[1]))
+    summary.category_counts = dict(category_counts)
     try:
         cf_val = ws.acell("H6", value_render_option="UNFORMATTED_VALUE").value
         summary.carried_forward = float(cf_val) if cf_val else 0.0
