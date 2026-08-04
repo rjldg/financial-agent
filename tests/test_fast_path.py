@@ -55,6 +55,15 @@ def test_hyphen_touching_the_number_is_refused():
     assert try_fast_parse("carwash - 50") is None
 
 
+def test_unicode_dash_touching_the_number_is_refused():
+    # iOS/macOS autocorrect a typed " - " into an en dash or em dash, so the
+    # same "reads as a negative amount" message can arrive with a different
+    # dash character - it must be refused exactly like the ASCII hyphen is.
+    assert try_fast_parse("carwash – 50") is None  # en dash, spaced
+    assert try_fast_parse("carwash—50") is None  # em dash, glued
+    assert try_fast_parse("carwash — 50") is None  # em dash, spaced
+
+
 def test_amount_glued_to_a_word_is_refused():
     # "jollibee250" hides a second amount inside what looks like a single
     # clean number ("300") - the fast path must not silently drop it.
