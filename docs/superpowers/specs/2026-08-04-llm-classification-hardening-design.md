@@ -295,3 +295,37 @@ depends on it.
 - LoRA or any weight-level fine-tuning
 - Learning the lexicon automatically from quick-fix corrections
 - Dashboard, budgets, subscriptions and scheduler behaviour
+
+## Benchmark result
+
+Measured 2026-08-04 against the 135-record fixture, Ollama 0.32, GTX 1660 SUPER.
+VRAM figures below were re-measured with each model loaded alone; the figures
+produced during the benchmark run itself were contaminated by a concurrent run
+and are not reported here.
+
+| Model | intent | category | amount | type | query shape | VRAM | Gate |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| **gemma3:4b** | **100%** | **99.2%** | **99.2%** | **98.4%** | 86.4% | 2.87 GB | **PASS** |
+| qwen2.5:3b-instruct | 95.6% | 91.3% | 98.4% | 96.9% | 86.4% | 2.08 GB | FAIL |
+| llama3.2:3b | 97.0% | 87.5% | 91.9% | 91.2% | 68.2% | 2.32 GB | FAIL |
+
+**Verdict: keep `gemma3:4b`.** It is the only candidate that clears the gate, and
+it wins on every accuracy dimension. The smaller models are 2-4x faster and lighter
+but trade away exactly the accuracy this work existed to fix. `gemma3:4b` is the
+largest of the three in VRAM, so it wins on merit rather than on footprint; that it
+also reads receipt images, meaning one model serves both paths with no swap, is a
+bonus rather than the deciding factor.
+
+Latency for the chosen model, measured in a clean solo run: p50 3.08s, p95 3.85s.
+
+Note on reproducibility: greedy decoding makes runs identical while a model stays
+resident, but scores drifted about one point across an unload/reload cycle. Treat
++/-1% as run-to-run noise, which leaves the 95% category gate with real headroom
+rather than sitting on a knife edge.
+
+## Outcome against the original problem
+
+The four measured baseline failures all pass, and the malformed-JSON class of
+failure is gone entirely (zero schema-invalid responses across 135 records).
+`gemma3:4b` was never the bottleneck - the prompt was. 31% of fixture messages
+are now settled by the lexicon fast path with no inference at all.
