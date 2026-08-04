@@ -29,8 +29,13 @@ def test_prompt_teaches_the_three_intents():
 
 def test_prompt_shows_a_multi_item_example():
     # Single-item-only examples made the model collapse two spends into one.
+    # A raw count of '"amount"' >= 3 would also pass with three separate
+    # single-item examples and no multi-item one at all, so assert on
+    # content unique to the two-transaction example instead: its user
+    # message, and two transaction objects chained inside one array.
     prompt = render_router_prompt()
-    assert prompt.count('"amount"') >= 3
+    assert "jollibee 320 and grab 145" in prompt
+    assert '"type":"Expense"},{"amount":145,"category":"Transport"' in prompt
 
 
 def test_parse_router_response_handles_fences():
