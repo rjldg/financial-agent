@@ -104,3 +104,38 @@ def test_context_that_changes_the_category_is_refused():
     # Bare "grab" means a ride (Transport), but "food delivery" means Food -
     # same story: the leftover context words force a fall-through.
     assert try_fast_parse("grab food delivery 350") is None
+
+
+# Every one of these dash-alike characters has been used, at one point or
+# another, to slip a disguised-negative amount past this parser - each prior
+# fix just added the specific character that had been caught, so the next
+# unlisted dash always sailed through. Driving the test off a character list
+# (rather than one function per character) is what makes that gap visible
+# instead of hiding it behind nine near-identical test names.
+_DISGUISED_NEGATIVE_DASHES = [
+    "‐",  # HYPHEN
+    "‑",  # NON-BREAKING HYPHEN
+    "‒",  # FIGURE DASH
+    "―",  # HORIZONTAL BAR
+    "－",  # FULLWIDTH HYPHEN-MINUS
+    "⁃",  # HYPHEN BULLET
+    "﹣",  # SMALL HYPHEN-MINUS
+]
+
+
+def test_unlisted_unicode_dashes_touching_the_number_are_refused():
+    # These arrive in real life pasted from a bank statement, a spreadsheet
+    # export, or a CJK input method - none of them were on the original
+    # three-character allowlist, so all of them used to book a positive
+    # 145-peso "grab" expense instead of being refused.
+    for dash in _DISGUISED_NEGATIVE_DASHES:
+        txn = try_fast_parse(f"grab {dash}145")
+        assert txn is None, f"dash {dash!r} ({dash.encode('unicode_escape')}) should refuse, got {txn!r}"
+
+
+def test_accounting_style_parentheses_are_refused():
+    # Accountants and spreadsheets write a negative amount by wrapping it in
+    # parentheses instead of a minus sign - "(145)" means -145, and booking
+    # it as a positive expense would silently invert the transaction.
+    assert try_fast_parse("grab (145)") is None
+    assert try_fast_parse("grab ( 145 )") is None

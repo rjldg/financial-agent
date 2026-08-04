@@ -7,6 +7,7 @@ more than waiting a few seconds for a right one.
 from __future__ import annotations
 
 import re
+import unicodedata
 
 from app.categories import LEXICON, classify_by_lexicon
 from app.models import Transaction
@@ -47,6 +48,27 @@ def _has_meaningful_leftover(text: str, category: str) -> bool:
     return any(word not in _FILLER_WORDS for word in words)
 
 
+def _fold_dashes(text: str) -> str:
+    """Fold every dash-like character to a plain ASCII "-".
+
+    This used to be a literal allowlist of three characters (en dash, em
+    dash, minus sign), and it was patched four separate times to add one
+    more character each time someone found a new way to paste a disguised
+    negative in - a bank statement export, a spreadsheet, a CJK input
+    method. A literal list can never close that hole, because the next dash
+    character is always missing until someone reports it. Folding by
+    Unicode's own dash-punctuation category ("Pd") instead means any dash
+    Unicode adds - past, present, or future - is handled automatically.
+    Two characters that read as a dash to a person aren't in "Pd": U+2212
+    MINUS SIGN (category "Sm", used by spreadsheets for negatives) and
+    U+2043 HYPHEN BULLET (category "Po"), so those are named explicitly.
+    """
+    return "".join(
+        "-" if unicodedata.category(c) == "Pd" or c in "−⁃" else c
+        for c in text
+    )
+
+
 def _hyphen_touches_number(text: str, run: re.Match[str]) -> bool:
     """A hyphen sitting right against the amount, glued or spaced out either way.
 
@@ -63,6 +85,18 @@ def _hyphen_touches_number(text: str, run: re.Match[str]) -> bool:
     return before.endswith("-") or after.startswith("-")
 
 
+def _wrapped_in_parens(text: str, run: re.Match[str]) -> bool:
+    """Accountants and spreadsheets write a negative by wrapping it in
+    parentheses instead of using a minus sign - "(145)" means -145. Booking
+    that as a positive expense silently flips the sign of a real transaction,
+    so it has to be refused just as hard as a leading minus is.
+    """
+    start, end = run.span()
+    before = text[:start].rstrip()
+    after = text[end:].lstrip()
+    return before.endswith("(") and after.startswith(")")
+
+
 def try_fast_parse(text: str) -> Transaction | None:
     """A Transaction when the message is plainly one spend, else None."""
     stripped = (text or "").strip()
@@ -70,12 +104,12 @@ def try_fast_parse(text: str) -> Transaction | None:
         return None
     # Phone keyboards autocorrect a typed hyphen into an en dash or em dash,
     # and Google Sheets / most finance apps render a negative with the
-    # dedicated minus sign (U+2212) instead - fold all of those to a plain
-    # "-" once, up front. Everything downstream (the hyphen-near-amount
+    # dedicated minus sign instead - fold all dash-alike characters to a
+    # plain "-" once, up front. Everything downstream (the hyphen-near-amount
     # check, then the description cleanup at the end) already only knows
     # about the ASCII hyphen, and normalising here keeps it that way instead
     # of teaching every check its own dash list.
-    stripped = stripped.replace("–", "-").replace("—", "-").replace("−", "-")
+    stripped = _fold_dashes(stripped)
     if _QUESTION.search(stripped) or _JOINING.search(stripped):
         return None
 
@@ -89,6 +123,8 @@ def try_fast_parse(text: str) -> Transaction | None:
     if len(digit_runs) != 1:
         return None
     if _hyphen_touches_number(stripped, digit_runs[0]):
+        return None
+    if _wrapped_in_parens(stripped, digit_runs[0]):
         return None
 
     category = classify_by_lexicon(stripped)
