@@ -77,3 +77,27 @@ def test_income_never_takes_the_fast_path():
     assert "salary" not in LEXICON
     assert "freelance" not in LEXICON
     assert try_fast_parse("salary 25000") is None
+
+
+def test_filler_words_dont_block_the_fast_path():
+    # "spent"/"paid"/"for"/"on" carry no category meaning of their own, so a
+    # bare merchant dressed up with them should still fast-path.
+    txn = try_fast_parse("spent 200 on groceries")
+    assert txn is not None and txn.category == "Food"
+    txn = try_fast_parse("paid 1500 for rent")
+    assert txn is not None and txn.category == "Rent"
+
+
+def test_bare_merchant_variants_still_fast_path():
+    assert try_fast_parse("grab 145") is not None
+    assert try_fast_parse("load 100") is not None
+
+
+def test_context_that_changes_the_category_is_refused():
+    # Bare "gas" means vehicle fuel (Transport), but "for cooking" flips it to
+    # Utilities - a leftover word the fast path can't read, so it must defer
+    # to the model rather than guess wrong.
+    assert try_fast_parse("bought gas for cooking 450") is None
+    # Bare "grab" means a ride (Transport), but "food delivery" means Food -
+    # same story: the leftover context words force a fall-through.
+    assert try_fast_parse("grab food delivery 350") is None

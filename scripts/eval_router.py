@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import collections
+import itertools
 import json
 import pathlib
 import statistics
@@ -87,12 +88,19 @@ async def main() -> int:
         totals["intent_ok"] += intent == rec["intent"]
         totals["count_ok"] += len(txns) == len(rec["transactions"])
 
-        for got, want in zip(txns, rec["transactions"]):
+        # zip_longest instead of zip: a plain zip truncates to the shorter list,
+        # so a missing or extra transaction would just vanish from every
+        # denominator below instead of counting against accuracy. Every expected
+        # transaction must be scored, and a hallucinated extra one must drag the
+        # score down rather than being ignored.
+        for got, want in itertools.zip_longest(txns, rec["transactions"]):
             totals["amount_n"] += 1
-            totals["amount_ok"] += abs(got["amount"] - float(want["amount"])) < 0.01
             totals["category_n"] += 1
-            totals["category_ok"] += got["category"] == want["category"]
             totals["type_n"] += 1
+            if got is None or want is None:
+                continue  # missing prediction or unmatched extra: an automatic miss on every axis
+            totals["amount_ok"] += abs(got["amount"] - float(want["amount"])) < 0.01
+            totals["category_ok"] += got["category"] == want["category"]
             totals["type_ok"] += got["type"] == want["type"]
             if got["category"] != want["category"]:
                 confusion[(want["category"], got["category"])] += 1

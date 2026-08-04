@@ -73,6 +73,12 @@ def render_router_prompt() -> str:
         "user: what did i earn in 2026-07\n"
         '{"intent":"query","transactions":[],"query":{"metric":"income",'
         '"category":null,"period":"2026-07"}}\n\n'
+        "user: what's my net for 2026-07\n"
+        '{"intent":"query","transactions":[],"query":{"metric":"net",'
+        '"category":null,"period":"2026-07"}}\n\n'
+        "user: how many times did i spend on transport this month\n"
+        '{"intent":"query","transactions":[],"query":{"metric":"count",'
+        '"category":"Transport","period":null}}\n\n'
         "user: hello\n"
         '{"intent":"unknown","transactions":[],"query":null}\n'
     )

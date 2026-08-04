@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 
-from app.categories import classify_by_lexicon
+from app.categories import LEXICON, classify_by_lexicon
 from app.models import Transaction
 
 _NUMBER = re.compile(r"(?<![\w.])(-?\d[\d,]*(?:\.\d+)?)(?![\w.])")
@@ -25,6 +25,26 @@ _JOINING = re.compile(r"(?<!\w)(and|plus|also)(?!\w)|[+;&]", re.IGNORECASE)
 
 # The fast path always books an Expense, so anything earned must fall through.
 _INCOME_CATEGORIES = {"Salary", "Freelance"}
+
+# Small connective words that carry no category meaning by themselves. The fast
+# path is context-blind - it can only see "one merchant word, one amount" - so a
+# message is only allowed to keep words beyond those two if they're just glue
+# like this. Anything else (e.g. "cooking", "delivery") could be the very
+# context that flips the category, so it must fall through to the model instead.
+_FILLER_WORDS = {"spent", "paid", "for", "on", "at", "bought", "in", "to", "my", "a"}
+
+
+def _has_meaningful_leftover(text: str, category: str) -> bool:
+    """True when words survive after stripping the amount and matched lexicon
+    term(s) that aren't just filler - i.e. there's more going on in this
+    message than a bare merchant and an amount.
+    """
+    low = _NUMBER.sub(" ", text.lower())
+    for term, term_category in LEXICON.items():
+        if term_category == category:
+            low = re.sub(rf"(?<!\w){re.escape(term)}(?!\w)", " ", low)
+    words = re.findall(r"[a-z]+", low)
+    return any(word not in _FILLER_WORDS for word in words)
 
 
 def _hyphen_touches_number(text: str, run: re.Match[str]) -> bool:
@@ -71,6 +91,8 @@ def try_fast_parse(text: str) -> Transaction | None:
 
     category = classify_by_lexicon(stripped)
     if category is None or category in _INCOME_CATEGORIES:
+        return None
+    if _has_meaningful_leftover(stripped, category):
         return None
 
     try:

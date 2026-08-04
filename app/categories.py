@@ -13,11 +13,20 @@ CATEGORY_GUIDE: dict[str, str] = {
         "fare, jeep, bus, taxi, Grab, gas, fuel, parking, toll, carwash, "
         "car maintenance, LTO registration"
     ),
-    "Bills": "phone load, internet, mobile plan, cable, streaming subscriptions",
+    "Bills": (
+        "phone load, internet, mobile plan, cable, streaming subscriptions "
+        "like Netflix or Spotify - if it's a recurring paid subscription, it's Bills"
+    ),
     "Salary": "salary or payroll received from an employer",
-    "Entertainment": "movies, games, concerts, bars, hobbies",
+    "Entertainment": (
+        "movies, games, concerts, bars, hobbies - a one-off outing, not a "
+        "recurring subscription (a subscription is Bills, not Entertainment)"
+    ),
     "Shopping": "clothes, gadgets, Shopee or Lazada orders, household goods",
-    "Health": "medicine, pharmacy, doctor, dentist, gym, haircut, salon, personal care",
+    "Health": (
+        "medicine, pharmacy (Watsons, Mercury Drug), doctor, dentist, gym, "
+        "haircut, salon, personal care"
+    ),
     "Utilities": "electricity (Meralco), water (Maynilad), LPG and gas utility bills",
     "Rent": "rent, dorm, condo association dues",
     "Freelance": "income from clients or side projects",
