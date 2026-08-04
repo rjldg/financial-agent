@@ -128,6 +128,13 @@ async def _run_subscription_check(context: ContextTypes.DEFAULT_TYPE) -> None:
         )
 
 
+# APScheduler throws away a job that starts later than its grace period, and the
+# default is a single second — enough for every daily run to be dropped when the
+# machine is momentarily busy. These jobs work out for themselves what they still
+# owe and are safe to repeat, so a late run must never be skipped.
+_NEVER_SKIP = {"misfire_grace_time": None}
+
+
 def register_jobs(application: Application) -> None:
     """Wire subscription jobs onto the application's JobQueue."""
     jq = application.job_queue
@@ -138,7 +145,9 @@ def register_jobs(application: Application) -> None:
             'pip install "python-telegram-bot[job-queue]" (or pip install -r requirements.txt).'
         )
         return
-    jq.run_once(_run_subscription_check, when=5)  # startup catch-up
-    jq.run_daily(_run_subscription_check, time=dt.time(hour=SUB_CHECK_HOUR, tzinfo=TZ))
-    jq.run_daily(_run_weekly_digest, time=dt.time(hour=WEEKLY_DIGEST_HOUR, tzinfo=TZ))
+    jq.run_once(_run_subscription_check, when=5, job_kwargs=_NEVER_SKIP)  # startup catch-up
+    jq.run_daily(_run_subscription_check, time=dt.time(hour=SUB_CHECK_HOUR, tzinfo=TZ),
+                 job_kwargs=_NEVER_SKIP)
+    jq.run_daily(_run_weekly_digest, time=dt.time(hour=WEEKLY_DIGEST_HOUR, tzinfo=TZ),
+                 job_kwargs=_NEVER_SKIP)
     logger.info("Registered subscription jobs (startup + daily @ %02d:00)", SUB_CHECK_HOUR)
