@@ -17,7 +17,7 @@
 - `num_ctx: 2048`, `keep_alive: "30m"` for text calls. Measured at 2.68 GB VRAM.
 - No new runtime dependencies. `httpx` and `pydantic` are already in `requirements.txt`.
 - Every task ends with a passing `python -m pytest -q` and a commit.
-- `tests/test_config_validation.py::test_validate_config_flags_missing_credentials_file` fails on this machine before you start (it asserts `service_account.json` is absent; it exists locally). That one pre-existing failure is expected — do not fix it, and do not count it as a regression.
+- The expected clean baseline depends on where you work. `tests/test_config_validation.py::test_validate_config_flags_missing_credentials_file` asserts `service_account.json` is absent. In an isolated worktree that file is gitignored and therefore missing, so the test PASSES and the baseline is fully green — any failure there is a regression you caused. In the main checkout the file exists, so that one test fails before you start; only there is it a known pre-existing failure to leave alone.
 
 ## File Structure
 
@@ -1296,7 +1296,14 @@ Expected: a table with one row per model. `gemma3:4b` is expected to win or tie 
 
 - [ ] **Step 4: Record the result**
 
-Append the table to `docs/superpowers/specs/2026-08-04-llm-classification-hardening-design.md` under a new `## Benchmark result` heading, with a one-line verdict naming the chosen model.
+Append the table under a new `## Benchmark result` heading in
+`docs/superpowers/specs/2026-08-04-llm-classification-hardening-design.md`, with a
+one-line verdict naming the chosen model.
+
+Note: that spec file lives on the documentation branch, not on the implementation
+branch. If it is not present in your working tree, do not create it and do not go
+looking for it on other branches — put the table in your report instead and leave
+the spec to whoever merges the branches.
 
 - [ ] **Step 5: Commit**
 
