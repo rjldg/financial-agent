@@ -47,6 +47,14 @@ def test_zero_and_negative_amounts_are_refused():
     assert try_fast_parse("carwash -50") is None
 
 
+def test_hyphen_touching_the_number_is_refused():
+    # A minus glued straight to the word ("carwash-50") or floating between
+    # spaces ("carwash - 50") reads as a negative amount just as much as
+    # "carwash -50" does - none of these should book a positive expense.
+    assert try_fast_parse("carwash-50") is None
+    assert try_fast_parse("carwash - 50") is None
+
+
 def test_amount_glued_to_a_word_is_refused():
     # "jollibee250" hides a second amount inside what looks like a single
     # clean number ("300") - the fast path must not silently drop it.

@@ -27,6 +27,22 @@ _JOINING = re.compile(r"(?<!\w)(and|plus|also)(?!\w)|[+;&]", re.IGNORECASE)
 _INCOME_CATEGORIES = {"Salary", "Freelance"}
 
 
+def _hyphen_touches_number(text: str, run: re.Match[str]) -> bool:
+    """A hyphen sitting right against the amount, glued or spaced out either way.
+
+    "carwash-50", "carwash - 50" and "carwash -50" all read as a negative or
+    typo'd amount to a person, but _NUMBER's word-boundary lookbehind only
+    catches the minus when it's glued straight to the digits with nothing in
+    between - a letter or a stray space in front of the hyphen makes it invisible
+    to that check. Rather than special-case every way a hyphen can hide near a
+    number, just strip the surrounding whitespace and see what's touching it.
+    """
+    start, end = run.span()
+    before = text[:start].rstrip()
+    after = text[end:].lstrip()
+    return before.endswith("-") or after.startswith("-")
+
+
 def try_fast_parse(text: str) -> Transaction | None:
     """A Transaction when the message is plainly one spend, else None."""
     stripped = (text or "").strip()
@@ -41,7 +57,10 @@ def try_fast_parse(text: str) -> Transaction | None:
     # A digit run stuck to a word (no space) never shows up in `numbers` above,
     # so "jollibee250 mcdo 300" would otherwise look like one clean amount and
     # silently drop the 250. If any digit run went uncounted, refuse instead.
-    if len(_ANY_DIGIT_RUN.findall(stripped)) != 1:
+    digit_runs = list(_ANY_DIGIT_RUN.finditer(stripped))
+    if len(digit_runs) != 1:
+        return None
+    if _hyphen_touches_number(stripped, digit_runs[0]):
         return None
 
     category = classify_by_lexicon(stripped)
