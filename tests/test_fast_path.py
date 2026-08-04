@@ -44,6 +44,14 @@ def test_unknown_merchant_is_refused():
 
 def test_zero_and_negative_amounts_are_refused():
     assert try_fast_parse("carwash 0") is None
+    assert try_fast_parse("carwash -50") is None
+
+
+def test_amount_glued_to_a_word_is_refused():
+    # "jollibee250" hides a second amount inside what looks like a single
+    # clean number ("300") - the fast path must not silently drop it.
+    assert try_fast_parse("jollibee250, mcdo 300") is None
+    assert try_fast_parse("jollibee250 mcdo 300") is None
 
 
 def test_income_never_takes_the_fast_path():

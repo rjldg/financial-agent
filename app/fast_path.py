@@ -11,7 +11,11 @@ import re
 from app.categories import classify_by_lexicon
 from app.models import Transaction
 
-_NUMBER = re.compile(r"(?<![\w.])(\d[\d,]*(?:\.\d+)?)(?![\w.])")
+_NUMBER = re.compile(r"(?<![\w.])(-?\d[\d,]*(?:\.\d+)?)(?![\w.])")
+# Same shape as _NUMBER but without the word-boundary guards, so it also
+# catches digits glued to a letter (e.g. the "250" in "jollibee250"). Used
+# only to notice when such a hidden amount exists, never to parse a value.
+_ANY_DIGIT_RUN = re.compile(r"\d[\d,]*(?:\.\d+)?")
 _QUESTION = re.compile(
     r"\?|(?<!\w)(how|what|when|where|why|which|who|did|do|does|is|are|"
     r"was|were|can|show|list|total)(?!\w)",
@@ -33,6 +37,11 @@ def try_fast_parse(text: str) -> Transaction | None:
 
     numbers = _NUMBER.findall(stripped)
     if len(numbers) != 1:
+        return None
+    # A digit run stuck to a word (no space) never shows up in `numbers` above,
+    # so "jollibee250 mcdo 300" would otherwise look like one clean amount and
+    # silently drop the 250. If any digit run went uncounted, refuse instead.
+    if len(_ANY_DIGIT_RUN.findall(stripped)) != 1:
         return None
 
     category = classify_by_lexicon(stripped)
