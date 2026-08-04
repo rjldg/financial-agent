@@ -9,13 +9,22 @@ from telegram.ext import ContextTypes
 from app.config import ALLOWED_USER_ID, now_local
 from app.formatting import format_money
 from app.insights import compose_query_answer
-from app.llm_parser import RateLimitError, parse_receipt, route_message
+from app.llm_parser import RateLimitError, RouterParseError, parse_receipt, route_message
+from app.fast_path import try_fast_parse
 from app.sheets import transactions as tx
 from app.sheets.transactions import append_transaction, get_monthly_summary
 from app.bot.keyboards import parse_callback, quick_fix_keyboard, category_picker_keyboard
 from app.bot.handlers.reports import is_authorised
 
 logger = logging.getLogger(__name__)
+
+_UNKNOWN_REPLY = (
+    "❌ Sorry, I couldn't understand that. Try 'spent 200 on groceries' "
+    "or ask 'how much did I spend on food this month?'"
+)
+_UNREADABLE_REPLY = (
+    "❌ The AI gave me an answer I couldn't read. Please try rephrasing that."
+)
 
 
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -24,10 +33,10 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     text = update.message.text
     logger.info("Received message from %s: %s", update.effective_user.id, text)
 
-    from app.config import USE_INTENT_ROUTER
-    if not USE_INTENT_ROUTER:
-        # Original single-call behavior: parse straight into one transaction.
-        await _handle_log_direct(update, text)
+    # Tier 0: a known merchant and a single amount needs no inference at all.
+    fast = try_fast_parse(text)
+    if fast is not None:
+        await _handle_log(update, [fast])
         return
 
     try:
@@ -36,6 +45,10 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await update.message.reply_text(
             "⏳ The AI service is rate-limited right now. Please wait a minute and try again."
         )
+        return
+    except RouterParseError:
+        logger.exception("Router returned an unusable answer for: %s", text)
+        await update.message.reply_text(_UNREADABLE_REPLY)
         return
     except Exception:
         logger.exception("Routing failed for message: %s", text)
@@ -48,30 +61,7 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     if result.intent == "log" and result.transactions:
         await _handle_log(update, result.transactions)
         return
-    await update.message.reply_text(
-        "❌ Sorry, I couldn't understand that. Try 'spent 200 on groceries' "
-        "or ask 'how much did I spend on food this month?'"
-    )
-
-
-async def _handle_log_direct(update: Update, text: str) -> None:
-    """Router-free path: parse one transaction with the original single call."""
-    from app.llm_parser import parse_transaction
-    try:
-        txn = await parse_transaction(text)
-    except RateLimitError:
-        await update.message.reply_text(
-            "⏳ The AI service is rate-limited right now. Please wait a minute and try again."
-        )
-        return
-    except Exception:
-        logger.exception("LLM parsing failed for message: %s", text)
-        await update.message.reply_text(
-            "❌ Sorry, I couldn't understand that message. "
-            "Try rephrasing it (e.g. 'Spent 200 on groceries')."
-        )
-        return
-    await _handle_log(update, [txn])
+    await update.message.reply_text(_UNKNOWN_REPLY)
 
 
 async def _handle_query(update: Update, query) -> None:
