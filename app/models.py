@@ -20,7 +20,7 @@ TxnType = Literal["Income", "Expense"]
 class Transaction(BaseModel):
     """A single financial transaction extracted from natural language."""
 
-    amount: float = Field(..., description="The monetary amount (always positive).")
+    amount: float = Field(..., gt=0, description="The monetary amount (always positive).")
     category: Category = Field(..., description="One of the allowed categories.")
     description: str = Field(..., description="Short human-readable summary.")
     type: TxnType = Field(..., description="'Income' or 'Expense'.")

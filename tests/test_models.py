@@ -1,6 +1,9 @@
 # tests/test_models.py
 from datetime import date
 
+import pytest
+from pydantic import ValidationError
+
 from app.models import CATEGORIES, Transaction, Subscription, BudgetStatus, MonthlySummary
 
 
@@ -12,6 +15,15 @@ def test_categories_has_twelve_entries():
 def test_transaction_validates():
     t = Transaction(amount=150, category="Food", description="McDo", type="Expense")
     assert t.amount == 150.0 and t.type == "Expense"
+
+
+def test_transaction_rejects_non_positive_amount():
+    # The model path has no fast_path-style guard of its own - a negative or
+    # zero amount here would silently corrupt Total Expenses on the sheet, so
+    # the field itself must refuse to validate one.
+    for bad_amount in (-145, 0):
+        with pytest.raises(ValidationError):
+            Transaction(amount=bad_amount, category="Food", description="x", type="Expense")
 
 
 def test_subscription_defaults():
