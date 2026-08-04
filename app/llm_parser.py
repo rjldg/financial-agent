@@ -141,13 +141,22 @@ async def _chat(
         except (httpx.ConnectError, httpx.TimeoutException, httpx.HTTPStatusError) as exc:
             if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code < 500:
                 raise  # 4xx errors are not retryable
-            delay = _BASE_DELAY * (2 ** attempt)
-            logger.warning(
-                "Ollama request failed (attempt %d/%d, retry in %ds): %s",
-                attempt + 1, _MAX_RETRIES, delay, exc,
-            )
             last_exc = exc
-            await asyncio.sleep(delay)
+            # Sleeping after the last attempt only delays the "unavailable"
+            # reply the user is about to get anyway - with a 120s timeout per
+            # attempt that's real time wasted for nothing.
+            if attempt < _MAX_RETRIES - 1:
+                delay = _BASE_DELAY * (2 ** attempt)
+                logger.warning(
+                    "Ollama request failed (attempt %d/%d, retry in %ds): %s",
+                    attempt + 1, _MAX_RETRIES, delay, exc,
+                )
+                await asyncio.sleep(delay)
+            else:
+                logger.warning(
+                    "Ollama request failed (attempt %d/%d, giving up): %s",
+                    attempt + 1, _MAX_RETRIES, exc,
+                )
         except (KeyError, json.JSONDecodeError) as exc:
             raise RouterParseError(f"Unreadable response from Ollama: {exc}") from exc
 
