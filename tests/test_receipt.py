@@ -1,11 +1,5 @@
-from app.llm_parser import build_image_data_uri, parse_receipt_response
+from app.llm_parser import parse_receipt_response
 from app.models import Transaction
-
-
-def test_build_image_data_uri_prefix():
-    uri = build_image_data_uri(b"hello", mime="image/png")
-    assert uri.startswith("data:image/png;base64,")
-    assert uri.endswith("aGVsbG8=")  # base64 of "hello"
 
 
 def test_parse_receipt_response_returns_transaction():

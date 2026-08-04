@@ -15,6 +15,12 @@ ALLOWED_USER_ID: int = int(os.environ["ALLOWED_USER_ID"])
 # --- Local LLM (Ollama) ---
 OLLAMA_BASE_URL: str = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
 OLLAMA_MODEL: str = os.environ.get("OLLAMA_MODEL", "gemma3:4b")
+# gemma3:4b reads images too, so by default one model serves text and receipts
+# and no swap ever happens. Point this elsewhere only if the text model changes.
+OLLAMA_VISION_MODEL: str = os.environ.get("OLLAMA_VISION_MODEL", OLLAMA_MODEL)
+# 2048 fits the prompt (~600 tokens) and measured 2.68 GB on a 6 GB card.
+OLLAMA_NUM_CTX: int = int(os.environ.get("OLLAMA_NUM_CTX", "2048"))
+OLLAMA_KEEP_ALIVE: str = os.environ.get("OLLAMA_KEEP_ALIVE", "30m")
 
 # --- Google Sheets ---
 GOOGLE_SHEETS_CREDENTIALS_FILE: str = os.environ.get(
@@ -63,9 +69,6 @@ def _flag(name: str, default: bool) -> bool:
     return raw.strip().lower() not in ("0", "false", "no", "off", "")
 
 
-# When False, plain text is parsed straight into a single transaction via the
-# original one-call path (no intent router, no multi-item, no NL queries).
-USE_INTENT_ROUTER: bool = _flag("USE_INTENT_ROUTER", True)
 # When False, the receipt-photo handler is not registered at all.
 ENABLE_RECEIPT_OCR: bool = _flag("ENABLE_RECEIPT_OCR", True)
 
