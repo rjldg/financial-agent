@@ -23,14 +23,19 @@ def _add_month(year: int, month: int) -> tuple[int, int]:
 
 def next_due_date(last_charged: date, frequency: str, day: int,
                   month: int | None = None) -> date:
-    """First due date strictly after `last_charged`."""
+    """The next due date after `last_charged`.
+
+    Monthly subscriptions land in a LATER month than `last_charged`, never in
+    the same one, so a month can never be charged twice.
+    """
     freq = frequency.lower()
     if freq == "monthly":
-        y, m = last_charged.year, last_charged.month
-        cand = date(y, m, clamp_day(y, m, day))
-        if cand > last_charged:
-            return cand
-        y, m = _add_month(y, m)
+        # Always look to the month after `last_charged`. Returning a date inside
+        # that same month would charge twice in one month whenever the day is
+        # moved later mid-cycle - which really happened, billing dental twice in
+        # one July. New subscriptions get their marker set a month back so their
+        # first charge still lands on time; see _initial_last_charged.
+        y, m = _add_month(last_charged.year, last_charged.month)
         return date(y, m, clamp_day(y, m, day))
     if freq == "yearly":
         if month is None:

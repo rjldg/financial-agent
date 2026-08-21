@@ -6,6 +6,8 @@ import logging
 from telegram import Update
 from telegram.ext import ContextTypes
 
+from datetime import date, timedelta
+
 from app.config import now_local
 from app.formatting import format_money
 from app.models import CATEGORIES
@@ -13,6 +15,19 @@ from app.sheets import subscriptions as subs
 from app.bot.handlers.reports import is_authorised
 
 logger = logging.getLogger(__name__)
+
+
+def _initial_last_charged(today: date, day: int) -> date:
+    """Where a brand-new subscription's schedule should start.
+
+    next_due_date always looks to the month after this marker, so putting it in
+    the previous month lets a subscription whose day is still ahead charge this
+    month, while one whose day has already passed waits for the next - and
+    neither ever gets back-charged for periods before it was added.
+    """
+    if subs.clamp_day(today.year, today.month, day) > today.day:
+        return today.replace(day=1) - timedelta(days=1)
+    return today
 
 
 async def addsub_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -28,8 +43,9 @@ async def addsub_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             f"❌ Unknown category '{fields['category']}'. Allowed: {', '.join(CATEGORIES)}"
         )
         return
-    # New subs set LastCharged = today so prior periods are not back-charged.
-    subs.add_subscription(fields, last_charged=now_local().date())
+    subs.add_subscription(
+        fields, last_charged=_initial_last_charged(now_local().date(), fields["day"])
+    )
     freq = fields["frequency"].lower()
     when = f"day {fields['day']}" + (f" of month {fields['month']}" if fields["month"] else "")
     await update.message.reply_text(
