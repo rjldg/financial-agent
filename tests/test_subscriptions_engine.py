@@ -3,7 +3,7 @@ from datetime import date
 import pytest
 
 from app.sheets.subscriptions import (
-    clamp_day, next_due_date, due_dates_since, parse_addsub_args,
+    clamp_day, initial_last_charged, next_due_date, due_dates_since, parse_addsub_args,
 )
 
 
@@ -103,23 +103,20 @@ def test_yearly_is_untouched_by_the_monthly_guard():
 # --- a new subscription's first charge must still land on time -------------
 
 def test_a_new_subscription_still_charges_this_month():
-    from app.bot.handlers.subscriptions import _initial_last_charged
     # Added on the 1st, pays on the 5th: the 5th is still ahead, so the marker
     # goes back a month and the first charge lands this month as before.
-    marker = _initial_last_charged(date(2026, 3, 1), 5)
+    marker = initial_last_charged(date(2026, 3, 1), 5)
     assert marker == date(2026, 2, 28)
     assert next_due_date(marker, "Monthly", 5) == date(2026, 3, 5)
 
 
 def test_a_new_subscription_whose_day_has_passed_waits():
-    from app.bot.handlers.subscriptions import _initial_last_charged
-    marker = _initial_last_charged(date(2026, 3, 10), 5)
+    marker = initial_last_charged(date(2026, 3, 10), 5)
     assert marker == date(2026, 3, 10)
     assert next_due_date(marker, "Monthly", 5) == date(2026, 4, 5)
 
 
 def test_a_new_subscription_is_never_back_charged():
-    from app.bot.handlers.subscriptions import _initial_last_charged
     today = date(2026, 3, 10)
-    marker = _initial_last_charged(today, 1)   # the 1st already went by
+    marker = initial_last_charged(today, 1)   # the 1st already went by
     assert due_dates_since(marker, today, "Monthly", 1) == []

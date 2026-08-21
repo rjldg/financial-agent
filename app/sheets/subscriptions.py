@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import calendar
 import logging
-from datetime import date
+from datetime import date, timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ def next_due_date(last_charged: date, frequency: str, day: int,
         # that same month would charge twice in one month whenever the day is
         # moved later mid-cycle - which really happened, billing dental twice in
         # one July. New subscriptions get their marker set a month back so their
-        # first charge still lands on time; see _initial_last_charged.
+        # first charge still lands on time; see initial_last_charged.
         y, m = _add_month(last_charged.year, last_charged.month)
         return date(y, m, clamp_day(y, m, day))
     if freq == "yearly":
@@ -46,6 +46,21 @@ def next_due_date(last_charged: date, frequency: str, day: int,
             return cand
         return date(y + 1, month, clamp_day(y + 1, month, day))
     raise ValueError(f"Unknown frequency: {frequency}")
+
+
+def initial_last_charged(today: date, day: int) -> date:
+    """Where a brand-new subscription's schedule should start.
+
+    next_due_date always looks to the month after this marker, so putting it in
+    the previous month lets a subscription whose day is still ahead charge this
+    month, while one whose day has already passed waits for the next - and
+    neither is ever back-charged for periods before it was added. It is the
+    partner of next_due_date's one-charge-per-month rule; neither is correct
+    without the other.
+    """
+    if clamp_day(today.year, today.month, day) > today.day:
+        return today.replace(day=1) - timedelta(days=1)
+    return today
 
 
 def due_dates_since(last_charged: date, today: date, frequency: str, day: int,

@@ -227,6 +227,20 @@ If you're updating a bot that's already running against a live Google Sheet (e.g
 
 Subscriptions live in a dedicated `Subscriptions` tab and can be managed from Telegram with `/addsub`, `/subs`, `/rmsub`, and `/togglesub`. The scheduler checks due monthly or yearly charges in the configured timezone and auto-logs each subscription only once per billing period.
 
+**A monthly subscription is charged at most once per calendar month.** The
+`LastCharged` cell records the month that has been settled, not merely the last
+date anything happened, so the next charge always falls in a later month. That
+is what stops a second charge appearing when you move a subscription's
+`DayOfMonth` later mid-cycle.
+
+Two consequences if you edit the tab by hand:
+
+- Setting `DayOfMonth` to `31` means the true end of each month — 31, 30, or 28/29
+  as appropriate — not "skip short months".
+- Editing `LastCharged` to a date inside a month that was never charged will skip
+  that month. To make a month chargeable again, set `LastCharged` to a date in the
+  **previous** month.
+
 ## 📊 Dashboard
 
 The `📊 Dashboard` tab summarizes your finances across monthly tabs. Use `/rebuild` to refresh KPI cards, trend chart, top categories, upcoming subscriptions, and budget status after manual sheet edits or when you want a clean dashboard rebuild.
