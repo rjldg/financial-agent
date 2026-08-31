@@ -84,24 +84,28 @@ def process_due_subscriptions(today: dt.date | None = None) -> list[tuple[str, d
     Idempotent: LastCharged only moves forward and is persisted per charge.
     """
     from app.sheets import subscriptions as subs
+    from app.sheets.client import retry_transient
     from app.sheets.transactions import append_transaction
 
     if today is None:
         today = now_local().date()
 
     posted: list[tuple[str, dt.date, float, str]] = []
-    for s in subs.list_subscriptions():
+    # Every Sheets call here is retried: this runs once a day, so a momentary
+    # Google outage that slips through would make a charge miss its due date.
+    for s in retry_transient(subs.list_subscriptions):
         if not s.active:
             continue
         try:
             base = s.last_charged or today
             for due in subs.due_dates_since(base, today, s.frequency, s.day, s.month):
-                append_transaction(
+                retry_transient(
+                    append_transaction,
                     date=due.strftime("%Y-%m-%d %H:%M"),
                     description=f"{s.name} (auto)",
                     category=s.category, amount=s.amount, txn_type=s.type,
                 )
-                subs.set_last_charged(s.row, due)
+                retry_transient(subs.set_last_charged, s.row, due)
                 posted.append((s.name, due, s.amount, s.type))
         except Exception:
             logger.exception("Failed processing subscription %s", s.name)

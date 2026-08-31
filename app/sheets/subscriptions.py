@@ -116,6 +116,8 @@ def parse_addsub_args(args: list[str]) -> dict:
             "frequency": frequency, "day": day, "month": month}
 
 # --- Sheets I/O (append below the pure engine) ---
+from gspread.exceptions import WorksheetNotFound  # noqa: E402
+
 from app.models import Subscription  # noqa: E402
 from app.sheets.client import get_spreadsheet  # noqa: E402
 
@@ -154,7 +156,9 @@ def ensure_subs_tab():
     ss = get_spreadsheet()
     try:
         return ss.worksheet(SUBS_SHEET)
-    except Exception:
+    except WorksheetNotFound:
+        # Only a genuinely absent tab may be created. Treating an outage as
+        # "missing" once made this build a second, empty Subscriptions tab.
         ws = ss.add_worksheet(title=SUBS_SHEET, rows=200, cols=len(SUBS_HEADERS))
         ws.update("A1", [SUBS_HEADERS], value_input_option="USER_ENTERED")
         return ws

@@ -2,12 +2,37 @@
 from __future__ import annotations
 
 import logging
+import time
 
 import gspread
+from gspread.exceptions import APIError
 
 from app.config import CURRENCY_SYMBOL, GOOGLE_SHEETS_CREDENTIALS_FILE, SHEET_ID
 
 logger = logging.getLogger(__name__)
+
+# Google answers with these when it is briefly overloaded or throttling us. Any
+# other code (revoked key, missing sheet) will fail again just as fast, so
+# retrying it only delays the real error.
+_TRANSIENT_CODES = {429, 500, 502, 503}
+_RETRY_ATTEMPTS = 3
+
+
+def retry_transient(fn, *args, **kwargs):
+    """Run a Sheets call, riding out Google's momentary failures.
+
+    Without this a single 503 during the daily run makes a subscription miss
+    its due date with nothing posted and no warning.
+    """
+    for attempt in range(_RETRY_ATTEMPTS):
+        try:
+            return fn(*args, **kwargs)
+        except APIError as exc:
+            if exc.code not in _TRANSIENT_CODES or attempt == _RETRY_ATTEMPTS - 1:
+                raise
+            delay = 2 ** attempt
+            logger.warning("Sheets call failed (%s); retrying in %ss", exc.code, delay)
+            time.sleep(delay)
 
 # Sheets number-format pattern for monetary cells, honoring the configured symbol.
 MONEY_PATTERN = f'"{CURRENCY_SYMBOL}"#,##0.00'
