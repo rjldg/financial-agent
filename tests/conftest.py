@@ -25,3 +25,34 @@ def api_error():
         ).encode()
         return APIError(resp)
     return _make
+
+
+class FakeWorksheet:
+    """Minimal stand-in for a gspread worksheet."""
+
+    id = 1
+
+    def update(self, *args, **kwargs):
+        pass
+
+
+class FakeSpreadsheet:
+    """Stand-in for the real sheet.
+
+    `errors` maps a tab title to the exception its lookup raises; every other
+    title resolves to a worksheet that already exists. Tabs this is asked to
+    create are recorded in `added`.
+    """
+
+    def __init__(self, errors: dict):
+        self.errors = errors
+        self.added: list[str] = []
+
+    def worksheet(self, title):
+        if title in self.errors:
+            raise self.errors[title]
+        return FakeWorksheet()
+
+    def add_worksheet(self, title, rows, cols):
+        self.added.append(title)
+        return FakeWorksheet()
