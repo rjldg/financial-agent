@@ -34,6 +34,8 @@ def budget_status(spent_by_cat: dict[str, float], limits: dict[str, float]) -> l
 
 
 # --- Sheets I/O ---
+from gspread.exceptions import WorksheetNotFound  # noqa: E402
+
 from app.sheets.client import get_spreadsheet  # noqa: E402
 
 
@@ -41,7 +43,7 @@ def ensure_budgets_tab():
     ss = get_spreadsheet()
     try:
         return ss.worksheet(BUDGETS_SHEET)
-    except Exception:
+    except WorksheetNotFound:
         ws = ss.add_worksheet(title=BUDGETS_SHEET, rows=50, cols=2)
         ws.update("A1", [BUDGETS_HEADERS], value_input_option="USER_ENTERED")
         return ws

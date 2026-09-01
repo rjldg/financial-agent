@@ -44,6 +44,8 @@ def top_categories(totals: dict[str, float], *, limit: int = 5) -> list[tuple[st
 
 
 # --- Sheets I/O (append below the pure functions) ---
+from gspread.exceptions import WorksheetNotFound  # noqa: E402
+
 from app.sheets.client import MONEY_PATTERN, batch_update, get_spreadsheet  # noqa: E402
 from app.sheets.transactions import get_monthly_summary, list_monthly_sheets  # noqa: E402
 
@@ -52,7 +54,7 @@ def _get_or_create_hidden_index():
     ss = get_spreadsheet()
     try:
         ws = ss.worksheet(INDEX_SHEET)
-    except Exception:
+    except WorksheetNotFound:
         ws = ss.add_worksheet(title=INDEX_SHEET, rows=200, cols=5)
         ws.update("A1:E1", [INDEX_HEADERS], value_input_option="USER_ENTERED")
         batch_update([{
@@ -129,7 +131,7 @@ def ensure_core_tabs() -> None:
     _get_or_create_hidden_index()
     try:
         dash = ss.worksheet(DASHBOARD_SHEET)
-    except Exception:
+    except WorksheetNotFound:
         dash = ss.add_worksheet(title=DASHBOARD_SHEET, rows=60, cols=12)
     batch_update([{
         "updateSheetProperties": {
